@@ -78,7 +78,9 @@ def detect_balls_by_hsv(warped_bgr, lower, upper, min_area=80, max_area=2000, mi
 
     return detections, mask
 
-def detect_orange_balls_hough(
+#Code that detects Orange balls close to each other for later use if white balls
+#start becoming blobs aswell
+"""def detect_orange_balls_hough(
     warped_bgr,
     lower=(5, 120, 120),
     upper=(25, 255, 255),
@@ -89,14 +91,6 @@ def detect_orange_balls_hough(
     minRadius=8,
     maxRadius=20
 ):
-    """
-    Returns:
-      dets: list of (x_px, y_px, r_px, area, circularity_placeholder)
-      mask: orange mask used for detection
-    Notes:
-      - area is computed from radius
-      - circularity is set to 1.0 (Hough already assumes circles)
-    """
     hsv = cv2.cvtColor(warped_bgr, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
 
@@ -126,7 +120,7 @@ def detect_orange_balls_hough(
 
     # Optional: sort biggest first
     dets.sort(key=lambda t: t[2], reverse=True)
-    return dets, mask
+    return dets, mask"""
 
 def px_to_world_cm(x_px, y_px, warp_w_px, warp_h_px, court_w_cm=120.0, court_h_cm=180.0):
     cm_per_px_x = court_w_cm / warp_w_px
@@ -179,15 +173,7 @@ if __name__ == "__main__":
     if warped is None:
         raise RuntimeError("Could not find arena")
 
-    orange_balls, omask = detect_orange_balls_hough(warped,
-    lower=(5, 120, 120),
-    upper=(25, 255, 255),
-    dp=1.2,
-    minDist=28,
-    param1=120,
-    param2=14,
-    minRadius=8,
-    maxRadius=20)
+    orange_balls, omask = detect_balls_by_hsv(warped, lower=(5,120,120), upper=(25,255,255))
     white_balls, wmask   = detect_balls_by_hsv(warped, lower=(0, 0, 180), upper=(180, 60, 255))
     print(len(orange_balls),len(white_balls))
     vis = warped.copy()
