@@ -78,6 +78,56 @@ def detect_balls_by_hsv(warped_bgr, lower, upper, min_area=80, max_area=2000, mi
 
     return detections, mask
 
+def detect_orange_balls_hough(
+    warped_bgr,
+    lower=(5, 120, 120),
+    upper=(25, 255, 255),
+    dp=1.2,
+    minDist=25,
+    param1=120,
+    param2=14,
+    minRadius=8,
+    maxRadius=20
+):
+    """
+    Returns:
+      dets: list of (x_px, y_px, r_px, area, circularity_placeholder)
+      mask: orange mask used for detection
+    Notes:
+      - area is computed from radius
+      - circularity is set to 1.0 (Hough already assumes circles)
+    """
+    hsv = cv2.cvtColor(warped_bgr, cv2.COLOR_BGR2HSV)
+    mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
+
+    # Clean mask a bit (avoid anything that merges blobs!)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8), iterations=1)
+
+    # HoughCircles works better on a blurred image
+    blur = cv2.GaussianBlur(mask, (9, 9), 2)
+
+    circles = cv2.HoughCircles(
+        blur,
+        cv2.HOUGH_GRADIENT,
+        dp=dp,
+        minDist=minDist,
+        param1=param1,
+        param2=param2,
+        minRadius=minRadius,
+        maxRadius=maxRadius
+    )
+
+    dets = []
+    if circles is not None:
+        circles = np.round(circles[0]).astype(int)
+        for x, y, r in circles:
+            area = float(np.pi * r * r)
+            dets.append((int(x), int(y), int(r), area, 1.0))
+
+    # Optional: sort biggest first
+    dets.sort(key=lambda t: t[2], reverse=True)
+    return dets, mask
+
 def px_to_world_cm(x_px, y_px, warp_w_px, warp_h_px, court_w_cm=120.0, court_h_cm=180.0):
     cm_per_px_x = court_w_cm / warp_w_px
     cm_per_px_y = court_h_cm / warp_h_px
@@ -120,7 +170,7 @@ def draw_detections_on_warp(
         )
 
 if __name__ == "__main__":
-    img = cv2.imread("../Images/20260225_103453.jpg")
+    img = cv2.imread("../Images/20260225_115207.jpg")
 
     WARP_W, WARP_H = 800, 1200
     COURT_W_CM, COURT_H_CM = 120.0, 180.0
@@ -129,7 +179,15 @@ if __name__ == "__main__":
     if warped is None:
         raise RuntimeError("Could not find arena")
 
-    orange_balls, omask = detect_balls_by_hsv(warped, lower=(5, 120, 120), upper=(25, 255, 255))
+    orange_balls, omask = detect_orange_balls_hough(warped,
+    lower=(5, 120, 120),
+    upper=(25, 255, 255),
+    dp=1.2,
+    minDist=28,
+    param1=120,
+    param2=14,
+    minRadius=8,
+    maxRadius=20)
     white_balls, wmask   = detect_balls_by_hsv(warped, lower=(0, 0, 180), upper=(180, 60, 255))
     print(len(orange_balls),len(white_balls))
     vis = warped.copy()
@@ -145,7 +203,7 @@ if __name__ == "__main__":
     )
 
     # Show results
-    cv2.imwrite("warped_detections.png", vis)
+    cv2.imwrite("warped_detections3.png", vis)
     cv2.imshow("Warped + detections", vis)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
