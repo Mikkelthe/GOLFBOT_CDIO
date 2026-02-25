@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from pathlib import Path
 
 def hsv_mask_red(hsv):
     # red wraps hue -> two ranges
@@ -164,32 +165,47 @@ def draw_detections_on_warp(
         )
 
 if __name__ == "__main__":
-    img = cv2.imread("../Images/20260225_115207.jpg")
+    base_path = Path(__file__).resolve().parent
+    images_folder = base_path.parent / "Images"
+    output_folder = base_path.parent / "Warped_Images"
 
+    output_folder.mkdir(exist_ok=True)
+
+    # ---- Court settings ----
     WARP_W, WARP_H = 800, 1200
     COURT_W_CM, COURT_H_CM = 120.0, 180.0
 
-    warped, M, redmask = find_arena_and_warp(img, out_w=WARP_W, out_h=WARP_H)
-    if warped is None:
-        raise RuntimeError("Could not find arena")
+    image_files = list(images_folder.glob("*.jpg"))
 
-    orange_balls, omask = detect_balls_by_hsv(warped, lower=(5,120,120), upper=(25,255,255))
-    white_balls, wmask   = detect_balls_by_hsv(warped, lower=(0, 0, 180), upper=(180, 60, 255))
-    print(len(orange_balls),len(white_balls))
-    vis = warped.copy()
-    draw_detections_on_warp(
-        vis, orange_balls, "O",
-        warp_w_px=WARP_W, warp_h_px=WARP_H,
-        court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM,
-    )
-    draw_detections_on_warp(
-        vis, white_balls, "W",
-        warp_w_px=WARP_W, warp_h_px=WARP_H,
-        court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM,
-    )
+    print(f"Found {len(image_files)} images")
 
-    # Show results
-    cv2.imwrite("warped_detections3.png", vis)
-    cv2.imshow("Warped + detections", vis)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    for img_path in image_files:
+        print(f"Processing {img_path.name}")
+
+        img = cv2.imread(str(img_path))
+        if img is None:
+            print("Could not load image")
+            continue
+
+        warped, M, redmask = find_arena_and_warp(img, out_w=WARP_W, out_h=WARP_H)
+        if warped is None:
+            raise RuntimeError("Could not find arena")
+
+        orange_balls, omask = detect_balls_by_hsv(warped, lower=(5,120,120), upper=(25,255,255))
+        white_balls, wmask   = detect_balls_by_hsv(warped, lower=(0, 0, 180), upper=(180, 60, 255))
+        print(len(orange_balls),len(white_balls))
+        vis = warped.copy()
+        draw_detections_on_warp(
+            vis, orange_balls, "O",
+            warp_w_px=WARP_W, warp_h_px=WARP_H,
+            court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM,
+        )
+        draw_detections_on_warp(
+            vis, white_balls, "W",
+            warp_w_px=WARP_W, warp_h_px=WARP_H,
+            court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM,
+        )
+
+        # Show results
+        output_path = output_folder / img_path.name
+        cv2.imwrite(str(output_path), vis)
