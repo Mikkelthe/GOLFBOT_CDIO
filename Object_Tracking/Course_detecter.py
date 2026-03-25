@@ -120,6 +120,34 @@ def find_box_corners_by_hough(img_bgr):
 
     return corners
 
+def find_red_cross_center(img_bgr):
+    hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
+    red_mask = hsv_mask_red(hsv)
+
+    kernel = np.ones((5, 5), np.uint8)
+    red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_OPEN, kernel, iterations=1)
+
+    contours, _ = cv2.findContours(red_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        return None
+
+    
+    contours = sorted(contours, key=cv2.contourArea, reverse=True)
+
+    if len(contours) < 2:
+        return None
+
+    cross_contour = contours[1]
+
+    M = cv2.moments(cross_contour)
+    if M["m00"] == 0:
+        return None
+
+    x = int(M["m10"] / M["m00"])
+    y = int(M["m01"] / M["m00"])
+
+    return (x, y)
+
 def Find_Arena(img, out_w, out_h):
     # corners must be TL,TR,BR,BL float32
     dst = np.array([[0,0],[out_w,0],[out_w,out_h],[0,out_h]], dtype=np.float32)
@@ -129,3 +157,4 @@ def Find_Arena(img, out_w, out_h):
     M = cv2.getPerspectiveTransform(corners.astype(np.float32), dst)
     warped = cv2.warpPerspective(img, M, (out_w, out_h))
     return warped
+

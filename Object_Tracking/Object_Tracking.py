@@ -2,16 +2,17 @@ import cv2
 import numpy as np
 from pathlib import Path
 from Course_detecter import Find_Arena
+from Course_detecter import find_red_cross_center
 
-def hsv_mask_red(hsv):
+"""def hsv_mask_red(hsv):
     # red wraps hue -> two ranges
     lower1 = np.array([0, 80, 60])
     upper1 = np.array([10, 255, 255])
     lower2 = np.array([170, 80, 60])
     upper2 = np.array([180, 255, 255])
-    return cv2.inRange(hsv, lower1, upper1) | cv2.inRange(hsv, lower2, upper2)
+    return cv2.inRange(hsv, lower1, upper1) | cv2.inRange(hsv, lower2, upper2)"""
 
-def order_corners(pts):
+"""def order_corners(pts):
     # pts: (4,2)
     pts = np.array(pts, dtype=np.float32)
     s = pts.sum(axis=1)
@@ -49,7 +50,7 @@ def find_arena_and_warp(img, out_w=800, out_h=1200):
     M = cv2.getPerspectiveTransform(corners, dst)
     warped = cv2.warpPerspective(img, M, (out_w, out_h))
     return warped, M, mask
-
+"""
 def detect_balls_by_hsv(warped_bgr, lower, upper, min_area=80, max_area=2000, min_circularity=0.75):
     hsv = cv2.cvtColor(warped_bgr, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
@@ -81,16 +82,7 @@ def detect_balls_by_hsv(warped_bgr, lower, upper, min_area=80, max_area=2000, mi
 
     return detections, mask
 
-def find_red_cross_center(img_bgr):
-    hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
-    red_mask = hsv_mask_red(hsv)
 
-    moments = cv2.moments(red_mask)
-    if moments["m00"] == 0:
-        return None
-
-    x = int(moments["m10"] / moments["m00"])
-    y = int(moments["m01"] / moments["m00"])
 
 #Code that detects Orange balls close to each other for later use if white balls
 #start becoming blobs aswell
@@ -171,15 +163,63 @@ def draw_detections_on_warp(
             cv2.LINE_AA
         )
         
+def draw_cross_on_warp(
+    warped_bgr,
+    cross_px,
+    warp_w_px,
+    warp_h_px,
+    court_w_cm=120.0,
+    court_h_cm=180.0,
+):
+    if cross_px is None:
+        return
+
+    x_px, y_px = cross_px
+    x_cm, y_cm = px_to_world_cm(
+        x_px, y_px,
+        warp_w_px=warp_w_px,
+        warp_h_px=warp_h_px,
+        court_w_cm=court_w_cm,
+        court_h_cm=court_h_cm
+    )
+
+    cv2.circle(warped_bgr, (x_px, y_px), 8, (0, 0, 255), -1)
+    cv2.circle(warped_bgr, (x_px, y_px), 16, (0, 0, 255), 2)
+
+    text = f"C: ({x_cm:.1f}cm, {y_cm:.1f}cm)"
+    cv2.putText(
+        warped_bgr,
+        text,
+        (x_px + 10, y_px - 10),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.6,
+        (255, 255, 255),
+        2,
+        cv2.LINE_AA
+    )
+        
 def find_objects_in_image(img_bgr):
-    warped, M, mask = find_arena_and_warp(img_bgr)
+    warped, M, mask = Find_Arena(img_bgr)
     if warped is None:
         return None, None
 
     orange_balls, omask = detect_balls_by_hsv(warped, lower=(5,120,120), upper=(25,255,255))
     white_balls, wmask   = detect_balls_by_hsv(warped, lower=(0, 0, 180), upper=(180, 60, 255))
+    
+    cross_px = find_red_cross_center(warped)
+    
+    if cross_px is not None:
+        cross_x_cm, cross_y_cm = px_to_world_cm(
+            cross_px[0],
+            cross_px[1],
+            warp_w_px=warped.shape[1],
+            warp_h_px=warped.shape[0]
+        )
+        cross_position = (cross_x_cm, cross_y_cm, cross_px[0], cross_px[1])
+    else:
+        cross_position = None
 
-    return orange_balls, white_balls
+    return orange_balls, white_balls, cross_position
 
 # Used to generate pictures to see the results of the detection
 # Not used in the actual bot, but can be useful for debugging and tuning parameters
@@ -212,6 +252,7 @@ if __name__ == "__main__":
 
         orange_balls, omask = detect_balls_by_hsv(warped, lower=(5,120,120), upper=(25,255,255))
         white_balls, wmask   = detect_balls_by_hsv(warped, lower=(0, 0, 180), upper=(180, 60, 255))
+        cross_position = find_red_cross_center(warped)
         print(len(orange_balls),len(white_balls))
         vis = warped.copy()
         draw_detections_on_warp(
@@ -221,6 +262,11 @@ if __name__ == "__main__":
         )
         draw_detections_on_warp(
             vis, white_balls, "W",
+            warp_w_px=WARP_W, warp_h_px=WARP_H,
+            court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM,
+        )
+        draw_cross_on_warp(
+            vis, cross_position,
             warp_w_px=WARP_W, warp_h_px=WARP_H,
             court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM,
         )
