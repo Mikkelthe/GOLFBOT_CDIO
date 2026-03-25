@@ -2,7 +2,9 @@ from ev3dev2.motor import LargeMotor, OUTPUT_B, OUTPUT_C, MoveTank
 from time import sleep
 
 # Motors connected to ports B and C
-tank = MoveTank(OUTPUT_B, OUTPUT_C)
+def tank(a,b):
+    tank = MoveTank(a, b)
+    return tank
 
 def move_backward(distance):
     tank.on_for_seconds(-100,-100, distance/(51.5/2))
@@ -25,17 +27,19 @@ def turn(degrees,direction):
 #tank.off()
 
 # Turning
-for (i) in range(4):
-    move_forward(100)
-    move_backward(100)
+if __name__ == "__main__":
+    tank = MoveTank(OUTPUT_B, OUTPUT_C)
+    for (i) in range(4):
+        move_forward(100)
+        move_backward(100)
 
-for (i) in range(50):
-    turn(90, "left")
-    turn(90, "right")
-turn(180, "left")
-turn(180, "right")
-turn(360, "left")
-turn(360, "right")
+    for (i) in range(50):
+        turn(90, "left")
+        turn(90, "right")
+    turn(180, "left")
+    turn(180, "right")
+    turn(360, "left")
+    turn(360, "right")
 
 
 # 720 degrees ≈ 2 full wheel rotations.
