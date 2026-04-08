@@ -1,10 +1,12 @@
+import math
+
 import cv2
 import numpy as np
 from pathlib import Path
 
 from Object_Tracking.Course_detecter import Find_Arena
 from Object_Tracking.Object_Tracking import find_objects_in_image, draw_detections_on_warp
-import  MoveBot.MoveBot
+import MoveBot.MoveBot
 
 
 
@@ -29,13 +31,14 @@ warped = Find_Arena(img, out_w=WARP_W, out_h=WARP_H)
 
 
 #temp variables to simulate bot position and heading
-botx = 40
-boty = 40
-botHeading = 0
+botX = 40
+botY = 40
+currentHeading = 0
 
 
 Orangeball, whiteballs, cross = find_objects_in_image(img,WARP_W,WARP_H)
 
+#ball coordinates
 orangeX = Orangeball[0][0]
 orangeY = Orangeball[0][1]
 
@@ -44,3 +47,28 @@ draw_detections_on_warp(visual,Orangeball,"position",warp_w_px=WARP_W,warp_h_px=
 output_folder = ""
 output_path = output_folder + "visTest.jpg"
 cv2.imwrite(output_path, visual)
+
+#find distance between bot and ball
+dist = np.sqrt(np.square(orangeX - botX) + np.square(orangeY - botY))
+
+directionRadian = np.atan2(orangeY - botY, orangeX - botX)
+targetDirection = round(math.degrees(directionRadian))
+turnFlag = ""
+deltaDirection = targetDirection - currentHeading
+
+# Normalize to [-180, 180]
+delta = (deltaDirection + 180) % 360 - 180
+
+if delta > 0:
+    turnFlag = "right"
+    turnAngle = delta  # Degrees to turn
+elif delta < 0:
+    turnFlag = "left"
+    turnAngle = -delta  # Absolute value for magnitude
+else:
+    turnFlag = "none"
+    turnAngle = 0
+
+MoveBot.MoveBot.turn(turnAngle, turnFlag)
+
+debug = 1
