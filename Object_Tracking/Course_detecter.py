@@ -120,6 +120,135 @@ def find_box_corners_by_hough(img_bgr):
 
     return corners
 
+
+def touches_border(contour, img_w, img_h, margin=5):
+    x, y, w, h = cv2.boundingRect(contour)
+    return (
+        x <= margin or
+        y <= margin or
+        x + w >= img_w - margin or
+        y + h >= img_h - margin
+    )
+
+
+def find_red_cross_contour(img_bgr):
+    hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
+    red_mask = hsv_mask_red(hsv)
+
+    kernel = np.ones((5, 5), np.uint8)
+    red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_OPEN, kernel, iterations=1)
+    red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_CLOSE, kernel, iterations=1)
+
+    # Connected components
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(red_mask, connectivity=8)
+
+    h, w = red_mask.shape
+    best_label = None
+    best_area = 0
+
+    for label in range(1, num_labels):  # skip background
+        x = stats[label, cv2.CC_STAT_LEFT]
+        y = stats[label, cv2.CC_STAT_TOP]
+        ww = stats[label, cv2.CC_STAT_WIDTH]
+        hh = stats[label, cv2.CC_STAT_HEIGHT]
+        area = stats[label, cv2.CC_STAT_AREA]
+
+        # ignore tiny blobs
+        if area < 300:
+            continue
+
+        # ignore anything touching image border
+        if x == 0 or y == 0 or (x + ww) >= w or (y + hh) >= h:
+            continue
+
+        if area > best_area:
+            best_area = area
+            best_label = label
+
+    if best_label is None:
+        return None, red_mask
+
+    cross_mask = np.zeros_like(red_mask)
+    cross_mask[labels == best_label] = 255
+
+    contours, _ = cv2.findContours(cross_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        return None, red_mask
+
+    cross_contour = max(contours, key=cv2.contourArea)
+    return cross_contour, cross_mask
+
+def find_red_cross_boxes(img_bgr):
+    cross_contour, cross_mask = find_red_cross_contour(img_bgr)
+    if cross_contour is None:
+        cv2.imwrite("debug_cross_mask.png", cross_mask)
+        return None
+
+    x, y, w, h = cv2.boundingRect(cross_contour)
+    roi = cross_mask[y:y+h, x:x+w]
+
+    ys, xs = np.where(roi > 0)
+    if len(xs) == 0:
+        return None
+
+    cx = int(np.mean(xs))
+    cy = int(np.mean(ys))
+
+    band = max(10, min(w, h) // 5)
+
+    vertical_mask = np.zeros_like(roi)
+    horizontal_mask = np.zeros_like(roi)
+
+    x1 = max(0, cx - band)
+    x2 = min(roi.shape[1], cx + band)
+    y1 = max(0, cy - band)
+    y2 = min(roi.shape[0], cy + band)
+
+    vertical_mask[:, x1:x2] = roi[:, x1:x2]
+    horizontal_mask[y1:y2, :] = roi[y1:y2, :]
+
+    v_contours, _ = cv2.findContours(vertical_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    h_contours, _ = cv2.findContours(horizontal_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    if not v_contours or not h_contours:
+        return None
+
+    v_contour = max(v_contours, key=cv2.contourArea)
+    h_contour = max(h_contours, key=cv2.contourArea)
+
+    v_contour = v_contour + np.array([[[x, y]]], dtype=np.int32)
+    h_contour = h_contour + np.array([[[x, y]]], dtype=np.int32)
+
+    v_rect = cv2.minAreaRect(v_contour)
+    h_rect = cv2.minAreaRect(h_contour)
+
+    v_box = cv2.boxPoints(v_rect).astype(int)
+    h_box = cv2.boxPoints(h_rect).astype(int)
+
+    M = cv2.moments(cross_contour)
+    center = None
+    if M["m00"] != 0:
+        center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+
+    return {
+        "vertical_box": v_box,
+        "horizontal_box": h_box,
+        "center": center,
+    }
+    
+def find_red_cross_center(img_bgr):
+    cross_contour, _ = find_red_cross_contour(img_bgr)
+    if cross_contour is None:
+        return None
+
+    M = cv2.moments(cross_contour)
+    if M["m00"] == 0:
+        return None
+
+    x = int(M["m10"] / M["m00"])
+    y = int(M["m01"] / M["m00"])
+    return (x, y)
+"""
 def find_red_cross_center(img_bgr):
     hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
     red_mask = hsv_mask_red(hsv)
@@ -147,6 +276,75 @@ def find_red_cross_center(img_bgr):
     y = int(M["m01"] / M["m00"])
 
     return (x, y)
+    hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
+    red_mask = hsv_mask_red(hsv)
+
+    kernel = np.ones((5, 5), np.uint8)
+    red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_OPEN, kernel, iterations=1)
+    red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_CLOSE, kernel, iterations=1)
+
+    contours, _ = cv2.findContours(red_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        return None
+
+    # Largest red contour is usually the border, second largest should be the cross
+    contours = sorted(contours, key=cv2.contourArea, reverse=True)
+    if len(contours) < 2:
+        return None
+
+    cross_contour = contours[1]
+
+    # Bounding box around the whole cross area
+    x, y, w, h = cv2.boundingRect(cross_contour)
+
+    # Crop mask to only cross area
+    roi = red_mask[y:y+h, x:x+w]
+
+    # Connected pixels of the cross
+    ys, xs = np.where(roi > 0)
+    if len(xs) == 0:
+        return None
+
+    # Estimate center of cross within ROI
+    cx = int(np.mean(xs))
+    cy = int(np.mean(ys))
+
+    # Split into vertical and horizontal parts using bands around center
+    band = max(8, min(w, h) // 6)
+
+    vertical_mask = np.zeros_like(roi)
+    horizontal_mask = np.zeros_like(roi)
+
+    vertical_mask[:, max(0, cx - band):min(roi.shape[1], cx + band)] = roi[:, max(0, cx - band):min(roi.shape[1], cx + band)]
+    horizontal_mask[max(0, cy - band):min(roi.shape[0], cy + band), :] = roi[max(0, cy - band):min(roi.shape[0], cy + band), :]
+
+    # Find contour for vertical bar
+    v_contours, _ = cv2.findContours(vertical_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    h_contours, _ = cv2.findContours(horizontal_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    if not v_contours or not h_contours:
+        return None
+
+    v_contour = max(v_contours, key=cv2.contourArea)
+    h_contour = max(h_contours, key=cv2.contourArea)
+
+    # Shift contours back into full-image coordinates
+    v_contour = v_contour + np.array([[[x, y]]], dtype=np.int32)
+    h_contour = h_contour + np.array([[[x, y]]], dtype=np.int32)
+
+    # Rotated rectangles
+    v_rect = cv2.minAreaRect(v_contour)
+    h_rect = cv2.minAreaRect(h_contour)
+
+    v_box = cv2.boxPoints(v_rect).astype(int)
+    h_box = cv2.boxPoints(h_rect).astype(int)
+
+    return {
+        "vertical_box": v_box,
+        "horizontal_box": h_box,
+        "center": (x + cx, y + cy)
+    }
+"""
 
 def Find_Arena(img, out_w, out_h):
     # corners must be TL,TR,BR,BL float32
