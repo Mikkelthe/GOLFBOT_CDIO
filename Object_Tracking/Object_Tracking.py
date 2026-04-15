@@ -45,6 +45,15 @@ def px_to_world_cm(x_px, y_px, warp_w_px, warp_h_px, court_w_cm=120.0, court_h_c
     y_cm_from_bottom = court_h_cm - y_cm_from_top
     return x_cm, y_cm_from_bottom
 
+def world_cm_to_px(x_cm, y_cm, warp_w_px=800, warp_h_px=1200, court_w_cm=120.0, court_h_cm=180.0):
+    cm_per_px_x = court_w_cm / warp_w_px
+    cm_per_px_y = court_h_cm / warp_h_px
+
+    x_px = x_cm / cm_per_px_x
+    y_px_from_top = y_cm / cm_per_px_y
+    y_px_from_bottom = warp_h_px - y_px_from_top
+    return int(x_px), int(y_px_from_bottom)
+
 def draw_detections_on_warp(
     warped_bgr,
     detections,
