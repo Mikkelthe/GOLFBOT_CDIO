@@ -21,12 +21,16 @@ if __name__ == "__main__":
     # ---- Court settings ----
     WARP_W, WARP_H = 800, 1200
     COURT_W_CM, COURT_H_CM = 120.0, 180.0
+    videodevice = cv2.VideoCapture(1)
     while i < 0:
         i += 1
-        videodevice = cv2.VideoCapture(2)
+        
 
         ret, img = videodevice.read()
-        
+        videocapturedimagepath = f"captured_image_{i}.jpg"
+        # Show results
+        output_path = output_folder / videocapturedimagepath
+        cv2.imwrite(str(output_path), img)
         
         warped = Find_Arena(img, out_w=WARP_W, out_h=WARP_H)
         if warped is None:
@@ -52,13 +56,13 @@ if __name__ == "__main__":
             warp_w_px=WARP_W, warp_h_px=WARP_H,
             court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM,
         )
-        videocapturedimagepath = f"captured_image_{i}.jpg"
+        videocapturedimagepath = f"captured_image_changed_{i}.jpg"
         # Show results
         output_path = output_folder / videocapturedimagepath
         cv2.imwrite(str(output_path), vis)
         
     images_folder = base_path.parent / "Images"
-
+    videodevice.release()
     
 
     
