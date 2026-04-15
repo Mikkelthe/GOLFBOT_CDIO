@@ -33,14 +33,16 @@ warped = Find_Arena(img, out_w=WARP_W, out_h=WARP_H)
 #temp variables to simulate bot position and heading
 botX = 40
 botY = 40
-currentHeading = 0
+botCoordinates = (botX,botY)
+currentHeading = 90
 
 
 Orangeball, whiteballs, cross = find_objects_in_image(img,WARP_W,WARP_H)
 
 #ball coordinates
-orangeX = Orangeball[0][0]
-orangeY = Orangeball[0][1]
+orangeX = Orangeball[3][0]
+orangeY = Orangeball[3][1]
+ballCoordinates = (orangeX,orangeY)
 
 visual = warped.copy()
 draw_detections_on_warp(visual,Orangeball,"position",warp_w_px=WARP_W,warp_h_px=WARP_H,court_w_cm=COURT_W_CM,court_h_cm=COURT_H_CM)
@@ -59,6 +61,11 @@ deltaDirection = targetDirection - currentHeading
 # Normalize to [-180, 180]
 delta = (deltaDirection + 180) % 360 - 180
 
+#img = cv2.arrowedLine(img, botCoordinates, (int(orangeX),int(orangeY)), (0,255,0), 1)
+cv2.imshow("arrow", img)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
 if delta > 0:
     turnFlag = "right"
     turnAngle = delta  # Degrees to turn
@@ -70,5 +77,4 @@ else:
     turnAngle = 0
 
 MoveBot.MoveBot.turn(turnAngle, turnFlag)
-
-debug = 1
+MoveBot.MoveBot.move_forward(dist)
