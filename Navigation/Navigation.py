@@ -85,5 +85,6 @@ else:
     turnFlag = "none"
     turnAngle = 0
 
-MoveBot.MoveBot.turn(turnAngle, turnFlag)
-MoveBot.MoveBot.move_forward(dist)
+#For testing with actual bot
+#MoveBot.MoveBot.turn(turnAngle, turnFlag)
+#MoveBot.MoveBot.move_forward(dist)
