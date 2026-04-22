@@ -3,13 +3,37 @@ import math
 import cv2
 import numpy as np
 from pathlib import Path
+from point import *
 
 import Object_Tracking
 from Object_Tracking.Course_detecter import Find_Arena
 from Object_Tracking.Object_Tracking import find_objects_in_image, draw_detections_on_warp
 import MoveBot.MoveBot
 
+def find_turn(current_heading, point1, point2):
+    direction_radian = np.atan2(point2.y - point1.y, point2.x - point1.x)
+    target_direction = round(math.degrees(direction_radian))
+    turn_flag = ""
+    delta_direction = target_direction - current_heading
 
+    # Normalize to [-180, 180]
+    delta = (delta_direction + 180) % 360 - 180
+
+    if delta > 0:
+        turn_flag = "right"
+        turn_angle = delta  # Degrees to turn
+    elif delta < 0:
+        turn_flag = "left"
+        turn_angle = -delta  # Absolute value for magnitude
+    else:
+        turn_flag = "none"
+        turn_angle = 0
+
+    return turn_flag, turn_angle
+
+#find distance between two points (fx. bot and ball)
+def distance_between_points(point1: Point, point2: Point):
+    return np.sqrt(np.square(point2.x - point1.x) + np.square(point2.y - point1.y))
 
 base_path = Path(__file__).resolve().parent
 images_folder = base_path.parent / "Images"
@@ -36,7 +60,8 @@ warped = Find_Arena(img, out_w=WARP_W, out_h=WARP_H)
 botX = 40
 botY = 40
 botCoordinates = Object_Tracking.Object_Tracking.world_cm_to_px(botX, botY, WARP_W, WARP_H)
-currentHeading = 90
+currentHeading = 90 #measures from x-axis and goes counter-clockwise
+
 
 Orangeball, whiteballs, cross = find_objects_in_image(img,WARP_W,WARP_H)
 
@@ -57,16 +82,9 @@ output_folder = ""
 output_path = output_folder + "visTest.jpg"
 cv2.imwrite(output_path, visual)
 
-#find distance between bot and ball
-dist = np.sqrt(np.square(orangeX - botX) + np.square(orangeY - botY))
 
-directionRadian = np.atan2(orangeY - botY, orangeX - botX)
-targetDirection = round(math.degrees(directionRadian))
-turnFlag = ""
-deltaDirection = targetDirection - currentHeading
 
-# Normalize to [-180, 180]
-delta = (deltaDirection + 180) % 360 - 180
+
 
 warped = drawBot(botX, botY)
 warped = cv2.arrowedLine(warped, botCoordinates, ballCoordinates, (0,255,0), 3)                 # Read image
@@ -75,15 +93,6 @@ cv2.imshow("arrow", warped)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
-if delta > 0:
-    turnFlag = "right"
-    turnAngle = delta  # Degrees to turn
-elif delta < 0:
-    turnFlag = "left"
-    turnAngle = -delta  # Absolute value for magnitude
-else:
-    turnFlag = "none"
-    turnAngle = 0
 
 #For testing with actual bot
 #MoveBot.MoveBot.turn(turnAngle, turnFlag)
