@@ -4,7 +4,7 @@ from .Object_Tracking import (
     draw_cross_on_warp
 )
 from .Course_detecter import (
-    Find_Arena,
+    find_arena,
     find_red_cross_boxes,
     find_red_cross_center,
     find_red_cross_contour)
@@ -32,7 +32,7 @@ if __name__ == "__main__":
         output_path = output_folder / videocapturedimagepath
         cv2.imwrite(str(output_path), img)
         
-        warped = Find_Arena(img, out_w=WARP_W, out_h=WARP_H)
+        warped = find_arena(img, out_w=WARP_W, out_h=WARP_H)
         if warped is None:
             raise RuntimeError("Could not find arena")
 
@@ -79,7 +79,7 @@ if __name__ == "__main__":
             print("Could not load image")
             continue
 
-        warped = Find_Arena(img, out_w=WARP_W, out_h=WARP_H)
+        warped = find_arena(img, out_w=WARP_W, out_h=WARP_H)
         if warped is None:
             raise RuntimeError("Could not find arena")
 
