@@ -56,6 +56,11 @@ def world_cm_to_px(x_cm, y_cm, warp_w_px=800, warp_h_px=1200, court_w_cm=120.0, 
     y_px_from_bottom = warp_h_px - y_px_from_top
     return int(x_px), int(y_px_from_bottom)
 
+#Requires court to be uniform to work correctly
+def radius_cm_to_px(radius_cm, warp_w_px=800, warp_h_px=1200, court_w_cm=120.0, court_h_cm=180.0):
+    cm_per_px_x = court_w_cm / warp_w_px
+    return int(radius_cm / cm_per_px_x)
+
 def draw_detections_on_warp(
     warped_bgr,
     detections,
