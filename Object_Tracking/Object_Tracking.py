@@ -92,6 +92,8 @@ def draw_cross_on_warp(img, cross_data,
                        court_w_cm, court_h_cm):
     if cross_data is None:
         return img
+    if len(cross_data) != 3:
+        return img
 
     cv2.drawContours(img, [cross_data["vertical_box"]], 0, (0, 255, 0), 2)
     cv2.drawContours(img, [cross_data["horizontal_box"]], 0, (255, 0, 0), 2)
