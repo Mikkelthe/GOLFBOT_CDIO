@@ -3,6 +3,8 @@ import math
 import cv2
 import numpy as np
 from pathlib import Path
+
+from BotDetector.ArUcoDetector import find_bot
 from point import *
 from Object_Tracking.Object_Tracking import *
 import MoveBot.MoveBot
@@ -38,32 +40,32 @@ images_folder = base_path.parent / "Images"
 image_files = list(images_folder.glob("*.jpg"))
 
 #load image
-img = cv2.imread(image_files[0])
+img = cv2.imread("arena.jpg")
 
 #picture dimensions in pixel
-WARP_W, WARP_H = 800, 1200
+WARP_W, WARP_H = 1200, 800
 
 #actual dimensions in cm
-COURT_W_CM, COURT_H_CM = 120.0, 180.0
+COURT_W_CM, COURT_H_CM = 180.0, 120.0
 
 #find arena in img and draw on warped
 warped = find_arena(img, out_w=WARP_W, out_h=WARP_H)
 
 #finds all objects in img
-orange_ball, white_ball_list, cross = find_objects_in_image(img, WARP_W, WARP_H)
+orange_ball, white_ball, cross = find_objects_in_image(img, WARP_W, WARP_H)
 
 #draw objects on warped
 draw_detections_on_warp(warped, orange_ball, "position", warp_w_px=WARP_W, warp_h_px=WARP_H, court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM)
+draw_detections_on_warp(warped, white_ball, "position", warp_w_px=WARP_W, warp_h_px=WARP_H, court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM)
 
-#temp variables to simulate bot position and heading
-bot_x = 40
-bot_y = 40
-botCoordinates = world_cm_to_px(bot_x, bot_y, WARP_W, WARP_H)
-currentHeading = 90 #measures from x-axis and goes counter-clockwise
+#heading measures from x-axis and goes counter-clockwise
+botCoordinates, currentHeading = find_bot(warped)
+botCoordinates = tuple(botCoordinates.astype(int))
+
 
 #ball coordinates
-orange_x = orange_ball[3][0]
-orange_y = orange_ball[3][1]
+orange_x = orange_ball[0][0]
+orange_y = orange_ball[0][1]
 
 #convert from cm to pixel
 ballCoordinates = world_cm_to_px(orange_x, orange_y, WARP_W, WARP_H)
@@ -76,7 +78,7 @@ warped = cv2.circle(warped, botCoordinates, radius_cm_to_px(16), (0, 0, 255), 3)
 warped = cv2.arrowedLine(warped, botCoordinates, ballCoordinates, (0,255,0), 3)
 
 #resize and show window with picture: warped
-warped = cv2.resize(warped, (400, 600))
+warped = cv2.resize(warped, (600, 400))
 cv2.imshow("arrow", warped)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
