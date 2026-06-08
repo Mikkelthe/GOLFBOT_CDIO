@@ -3,13 +3,15 @@ import numpy as np
 from pathlib import Path
 from .Course_detecter import find_arena
 from .Course_detecter import find_red_cross_center
+from .Course_detecter import find_red_cross_boxes
 
 
-def detect_balls_by_hsv(warped_bgr, lower, upper, min_area=80, max_area=2000, min_circularity=0.75):
+def detect_balls_by_hsv(warped_bgr, lower, upper, min_area=150, max_area=2000, min_circularity=0.75):
     hsv = cv2.cvtColor(warped_bgr, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
     mask = cv2.erode(mask, np.ones((5, 5), np.uint8), iterations=1)
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((5,5), np.uint8), iterations=1)
+
 
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -118,17 +120,12 @@ def find_objects_in_image(img_bgr,w,h):
     orange_balls, omask = detect_balls_by_hsv(warped, lower=(5,120,120), upper=(25,255,255))
     white_balls, wmask   = detect_balls_by_hsv(warped, lower=(0, 0, 180), upper=(180, 60, 255))
     
-    cross_px = find_red_cross_center(warped)
-    
-    if cross_px is not None:
-        cross_x_cm, cross_y_cm = px_to_world_cm(
-            cross_px[0],
-            cross_px[1],
-            warp_w_px=warped.shape[1],
-            warp_h_px=warped.shape[0]
-        )
-        cross_position = (cross_x_cm, cross_y_cm, cross_px[0], cross_px[1])
+    cross_position = find_red_cross_boxes(warped)
+
+    if cross_position is None:
+        print("i failed to find cross_center")
     else:
-        cross_position = None
+        print(len(cross_position))
+        print(cross_position)
 
     return orange_balls, white_balls, cross_position
