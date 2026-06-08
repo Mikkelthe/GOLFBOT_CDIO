@@ -346,7 +346,7 @@ def find_red_cross_center(img_bgr):
     }
 """
 
-def Find_Arena(img, out_w, out_h):
+def find_arena(img, out_w, out_h):
     # corners must be TL,TR,BR,BL float32
     dst = np.array([[0,0],[out_w,0],[out_w,out_h],[0,out_h]], dtype=np.float32)
     corners = find_box_corners_by_hough(img)

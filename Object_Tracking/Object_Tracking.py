@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from pathlib import Path
-from .Course_detecter import Find_Arena
+from .Course_detecter import find_arena
 from .Course_detecter import find_red_cross_center
 
 
@@ -111,7 +111,7 @@ def draw_cross_on_warp(img, cross_data,
     return img
         
 def find_objects_in_image(img_bgr,w,h):
-    warped = Find_Arena(img_bgr,w,h)
+    warped = find_arena(img_bgr, w, h)
     if warped is None:
         return None, None
 
