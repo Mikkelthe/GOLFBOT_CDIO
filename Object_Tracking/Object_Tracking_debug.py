@@ -1,3 +1,5 @@
+import time
+
 from .Object_Tracking import (
     detect_balls_by_hsv,
     draw_detections_on_warp,
@@ -23,10 +25,10 @@ if __name__ == "__main__":
     WARP_W, WARP_H = 1200, 800
     COURT_W_CM, COURT_H_CM = 180.0, 120.0
 
-    videodevice = cv2.VideoCapture(2)
+    videodevice = cv2.VideoCapture(1)
     videodevice.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
     videodevice.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-
+    time.sleep(5)
     while i < 20:
         i += 1
         print("i got here")

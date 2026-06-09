@@ -395,6 +395,7 @@ def find_arena(img, out_w, out_h):
     corners = find_box_corners_by_hough(img)
     if corners is None:
         return None, None
+
     M = cv2.getPerspectiveTransform(corners.astype(np.float32), dst)
     warped = cv2.warpPerspective(img, M, (out_w, out_h))
     return warped
