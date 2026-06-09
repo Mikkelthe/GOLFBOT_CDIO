@@ -29,12 +29,14 @@ if __name__ == "__main__":
     videodevice.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
     videodevice.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
     time.sleep(5)
+    start_time = time.time()
     while i < 20:
         i += 1
-        print("i got here")
+        if i%5 == 0:
+            print("move")
+            time.sleep(10)
 
         ret, img = videodevice.read()
-        print("i took picture")
         videocapturedimagepath = f"Images/captured_image_{i}.jpg"
 
         # Show results
@@ -44,8 +46,10 @@ if __name__ == "__main__":
 
 
     images_folder = base_path.parent / "Images"
+    new_time = time.time()
     videodevice.release()
-    
+    print(time.time() - new_time)
+    print(time.time() - start_time)
 
     
 
@@ -129,3 +133,4 @@ if __name__ == "__main__":
         # Show results
         output_path = output_folder / img_path.name
         cv2.imwrite(str(output_path), vis)
+    print("time to proccess " + str(len(image_files)) +  " = " + str(time.time() - start_time))
