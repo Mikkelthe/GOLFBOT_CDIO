@@ -1,5 +1,7 @@
 import cv2
 import numpy as np
+from Navigation.point import Point
+
 
 def find_bot(image):
     aruco_dict = cv2.aruco.getPredefinedDictionary(
@@ -13,7 +15,7 @@ def find_bot(image):
     if ids is not None:
         pts = corners[0][0]
 
-        center = np.mean(pts, axis=0)
+        center = Point(np.mean(pts, axis=0))
 
         # Marker top edge
         top_left = pts[0]
@@ -25,9 +27,9 @@ def find_bot(image):
             np.arctan2(heading[1], heading[0])
         )
         #for debugging
-        print("Center:", center)
-        print("Orientation:", angle)
+        #print("Center:", center)
+        #print("Orientation:", angle)
     return center, angle
 
-#image = cv2.imread("arena.jpg")
+#image = cv2.imread("arena3.jpg")
 #find_bot(image)

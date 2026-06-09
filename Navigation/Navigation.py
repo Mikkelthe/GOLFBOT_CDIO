@@ -40,13 +40,16 @@ images_folder = base_path.parent / "Images"
 image_files = list(images_folder.glob("*.jpg"))
 
 #load image
-img = cv2.imread("arena.jpg")
+img = cv2.imread("arena4.jpg")
 
 #picture dimensions in pixel
-WARP_W, WARP_H = 1200, 800
+WARP_W, WARP_H = 1100, 700
+
+#Center of image in pixel
+center_point = Point(WARP_W / 2, WARP_H / 2)
 
 #actual dimensions in cm
-COURT_W_CM, COURT_H_CM = 180.0, 120.0
+COURT_W_CM, COURT_H_CM = 170.0, 125.0
 
 #find arena in img and draw on warped
 warped = find_arena(img, out_w=WARP_W, out_h=WARP_H)
@@ -64,15 +67,30 @@ botCoordinates = tuple(botCoordinates.astype(int))
 
 
 #ball coordinates
-orange_x = orange_ball[0][0]
-orange_y = orange_ball[0][1]
+white_x = white_ball[0][0]
+white_y = white_ball[0][1]
 
 #convert from cm to pixel
-ballCoordinates = world_cm_to_px(orange_x, orange_y, WARP_W, WARP_H)
+ballCoordinates = world_cm_to_px(white_x, white_y, WARP_W, WARP_H)
 botDimensions = world_cm_to_px(32, 32, WARP_W, WARP_H)
 
+#Calculate parallax distortion for bot
+cam_height_cm = 195
+cam_height_px = cm_to_px(cam_height_cm)
+bot_height_cm = 46
+bot_height_px = cm_to_px(bot_height_cm)
+ratio_height = cam_height_px / (cam_height_px - bot_height_px)
+
+
+x, y = botCoordinates
+center_to_bot_dist = find_distance_between_points(center_point,botCoordinates)
+x_ratio = int(x / ratio_height)
+y_ratio = int(y / ratio_height)
+botCoordinates = x_ratio, y_ratio
+
+
 #draw bot on warped (current bot radius is 16)
-warped = cv2.circle(warped, botCoordinates, radius_cm_to_px(16), (0, 0, 255), 3)
+warped = cv2.circle(warped, botCoordinates, cm_to_px(16), (0, 0, 255), 3)
 
 #draw arrow on warped
 warped = cv2.arrowedLine(warped, botCoordinates, ballCoordinates, (0,255,0), 3)
