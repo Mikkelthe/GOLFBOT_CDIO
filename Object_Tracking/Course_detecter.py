@@ -106,9 +106,19 @@ def find_box_corners_by_hough(img_bgr):
     # intersections: TL, TR, BR, BL
     tl = line_intersection(T, L)
     tr = line_intersection(T, R)
+    print(tr)
+    print(tl)
     br = line_intersection(B, R)
     bl = line_intersection(B, L)
-
+    tr[0] += 50
+    tr[1] += -50
+    print(tr)
+    tl[0] += -50
+    tl[1] += -50
+    br[0] += 50
+    br[1] += 50
+    bl[0] += -50
+    bl[1] += 50
     if any(p is None for p in [tl, tr, br, bl]):
         return None, red, edges
 
@@ -132,7 +142,24 @@ def touches_border(contour, img_w, img_h, margin=5):
 
 
 def find_red_cross_contour(img_bgr):
-    hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
+    img_h, img_w = img_bgr.shape[:2]
+
+    # Middle search area size
+    roi_w = 400
+    roi_h = 300
+
+    # Calculate centered ROI
+    x0 = max(0, img_w // 2 - roi_w // 2)
+    y0 = max(0, img_h // 2 - roi_h // 2)
+    x1 = min(img_w, x0 + roi_w)
+    y1 = min(img_h, y0 + roi_h)
+
+    # Crop image to only middle area
+    roi_bgr = img_bgr[y0:y1, x0:x1]
+    #debug = roi_bgr.copy()
+    #cv2.imwrite("debug_middle_roi.png", debug)
+
+    hsv = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2HSV)
     red_mask = hsv_mask_red(hsv)
 
     kernel = np.ones((5, 5), np.uint8)
@@ -176,7 +203,17 @@ def find_red_cross_contour(img_bgr):
         return None, red_mask
 
     cross_contour = max(contours, key=cv2.contourArea)
-    return cross_contour, cross_mask
+    cross_contour = cross_contour + np.array([[[x0, y0]]], dtype=np.int32)
+
+
+    full_mask = np.zeros((img_h, img_w), dtype=np.uint8)
+    full_mask[y0:y1, x0:x1] = cross_mask
+
+    #debug_mask = full_mask.copy()
+    #cv2.imwrite("debug_mask.png", debug_mask)
+
+
+    return cross_contour, full_mask
 
 def find_red_cross_boxes(img_bgr):
     cross_contour, cross_mask = find_red_cross_contour(img_bgr)
@@ -185,7 +222,7 @@ def find_red_cross_boxes(img_bgr):
         return None
 
     x, y, w, h = cv2.boundingRect(cross_contour)
-    roi = cross_mask[y:y+h, x:x+w]
+    roi = cross_mask[y:y + h, x:x + w]
 
     ys, xs = np.where(roi > 0)
     if len(xs) == 0:
@@ -194,36 +231,42 @@ def find_red_cross_boxes(img_bgr):
     cx = int(np.mean(xs))
     cy = int(np.mean(ys))
 
+    # How thick the arm separation should be
     band = max(10, min(w, h) // 5)
 
-    vertical_mask = np.zeros_like(roi)
-    horizontal_mask = np.zeros_like(roi)
+    mask_1 = np.zeros_like(roi)
+    mask_2 = np.zeros_like(roi)
 
-    x1 = max(0, cx - band)
-    x2 = min(roi.shape[1], cx + band)
-    y1 = max(0, cy - band)
-    y2 = min(roi.shape[0], cy + band)
+    # Split pixels into two diagonal arms instead of vertical/horizontal arms
+    for px, py in zip(xs, ys):
+        # Distance to diagonal going from top-left to bottom-right
+        dist_diag_1 = abs((py - cy) - (px - cx))
 
-    vertical_mask[:, x1:x2] = roi[:, x1:x2]
-    horizontal_mask[y1:y2, :] = roi[y1:y2, :]
+        # Distance to diagonal going from bottom-left to top-right
+        dist_diag_2 = abs((py - cy) + (px - cx))
 
-    v_contours, _ = cv2.findContours(vertical_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    h_contours, _ = cv2.findContours(horizontal_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if dist_diag_1 < dist_diag_2:
+            mask_1[py, px] = 255
+        else:
+            mask_2[py, px] = 255
 
-    if not v_contours or not h_contours:
+    contours_1, _ = cv2.findContours(mask_1, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours_2, _ = cv2.findContours(mask_2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    if not contours_1 or not contours_2:
         return None
 
-    v_contour = max(v_contours, key=cv2.contourArea)
-    h_contour = max(h_contours, key=cv2.contourArea)
+    contour_1 = max(contours_1, key=cv2.contourArea)
+    contour_2 = max(contours_2, key=cv2.contourArea)
 
-    v_contour = v_contour + np.array([[[x, y]]], dtype=np.int32)
-    h_contour = h_contour + np.array([[[x, y]]], dtype=np.int32)
+    contour_1 = contour_1 + np.array([[[x, y]]], dtype=np.int32)
+    contour_2 = contour_2 + np.array([[[x, y]]], dtype=np.int32)
 
-    v_rect = cv2.minAreaRect(v_contour)
-    h_rect = cv2.minAreaRect(h_contour)
+    rect_1 = cv2.minAreaRect(contour_1)
+    rect_2 = cv2.minAreaRect(contour_2)
 
-    v_box = cv2.boxPoints(v_rect).astype(int)
-    h_box = cv2.boxPoints(h_rect).astype(int)
+    box_1 = cv2.boxPoints(rect_1).astype(int)
+    box_2 = cv2.boxPoints(rect_2).astype(int)
 
     M = cv2.moments(cross_contour)
     center = None
@@ -231,8 +274,8 @@ def find_red_cross_boxes(img_bgr):
         center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
 
     return {
-        "vertical_box": v_box,
-        "horizontal_box": h_box,
+        "vertical_box": box_1,
+        "horizontal_box": box_2,
         "center": center,
     }
     
