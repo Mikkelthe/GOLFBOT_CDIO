@@ -6,7 +6,7 @@ from .Course_detecter import find_red_cross_center
 from .Course_detecter import find_red_cross_boxes
 
 
-def detect_balls_by_hsv(warped_bgr, lower, upper, min_area=150, max_area=400, min_circularity=0.70):
+def detect_balls_by_hsv(warped_bgr, lower, upper, min_area=150, max_area=800, min_circularity=0.60):
     hsv = cv2.cvtColor(warped_bgr, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
     mask = cv2.erode(mask, np.ones((5,5), np.uint8), iterations=1)
@@ -117,8 +117,10 @@ def find_objects_in_image(img_bgr,w,h):
     if warped is None:
         return None, None
 
-    orange_balls, omask = detect_balls_by_hsv(warped, lower=(5,120,120), upper=(25,255,255))
-    white_balls, wmask   = detect_balls_by_hsv(warped, lower=(0, 0, 180), upper=(180, 60, 255))
+    orange_balls, omask = detect_balls_by_hsv(warped, lower=(10, 70, 215), upper=(55, 255, 255))
+    dark_orange_balls, domask = detect_balls_by_hsv(warped, lower=(5, 120, 120), upper=(45, 255, 255))
+    white_balls, wmask = detect_balls_by_hsv(warped, lower=(0, 0, 220), upper=(255, 60, 255))
+    shadowywhite_balls, sw = detect_balls_by_hsv(warped, lower=(0, 0, 115), upper=(180, 125, 240))
     
     cross_position = find_red_cross_boxes(warped)
 
@@ -128,4 +130,4 @@ def find_objects_in_image(img_bgr,w,h):
         print(len(cross_position))
         print(cross_position)
 
-    return orange_balls, white_balls, cross_position
+    return orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position

@@ -22,15 +22,15 @@ if __name__ == "__main__":
 
         
     # ---- Court settings ----
-    WARP_W, WARP_H = 1200, 800
+    WARP_W, WARP_H = 1500, 1000
     COURT_W_CM, COURT_H_CM = 180.0, 120.0
 
-    videodevice = cv2.VideoCapture(1)
-    videodevice.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-    videodevice.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-    time.sleep(5)
+    # videodevice = cv2.VideoCapture(1)
+    # videodevice.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+    # videodevice.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+    # time.sleep(5)
     start_time = time.time()
-    while i < 20:
+    while i < 0:
         i += 1
         if i%5 == 0:
             print("move")
@@ -46,10 +46,10 @@ if __name__ == "__main__":
 
 
     images_folder = base_path.parent / "Images"
-    new_time = time.time()
-    videodevice.release()
-    print(time.time() - new_time)
-    print(time.time() - start_time)
+    # new_time = time.time()
+    # videodevice.release()
+    # print(time.time() - new_time)
+    # print(time.time() - start_time)
 
     
 
@@ -69,10 +69,10 @@ if __name__ == "__main__":
         if warped is None:
             raise RuntimeError("Could not find arena")
 
-        orange_balls, omask = detect_balls_by_hsv(warped, lower=(10, 70, 215), upper=(55, 255, 255))
-        dark_orange_balls, domask = detect_balls_by_hsv(warped, lower=(5, 120, 120), upper=(45, 255, 255))
-        white_balls, wmask = detect_balls_by_hsv(warped, lower=(0, 0, 220), upper=(255, 60, 255))
-        shadowywhite_balls, sw = detect_balls_by_hsv(warped, lower=(0, 0, 115), upper=(180, 125, 240))
+        orange_balls, omask = detect_balls_by_hsv(warped, lower=(15, 120, 150), upper=(70, 255, 255))
+        dark_orange_balls, domask = detect_balls_by_hsv(warped, lower=(15, 120, 120), upper=(45, 255, 255))
+        white_balls, wmask = detect_balls_by_hsv(warped, lower=(0, 0, 220), upper=(180, 60, 255))
+        shadowywhite_balls, sw = detect_balls_by_hsv(warped, lower=(0, 0, 30), upper=(180, 80, 245))
 
         mask_folder = base_path.parent / "masks_Images"
         mask_folder.mkdir(exist_ok=True)
@@ -89,10 +89,11 @@ if __name__ == "__main__":
         swmask_folder = base_path.parent / mask_folder / "swmask_Images"
         swmask_folder.mkdir(exist_ok=True)
 
-        wmaskpath = f"{wmask_folder}/wmasked_image_{img_path.name}.jpg"
-        omaskpath = f"{omask_folder}/omasked_image_{img_path.name}.jpg"
-        domaskpath = f"{domask_folder}/domasked_image_{img_path.name}.jpg"
-        swmaskpath = f"{swmask_folder}/swmasked_image_{img_path.name}.jpg"
+
+        wmaskpath = f"{wmask_folder}/wmasked_image_{img_path.name}"
+        omaskpath = f"{omask_folder}/omasked_image_{img_path.name}"
+        domaskpath = f"{domask_folder}/domasked_image_{img_path.name}"
+        swmaskpath = f"{swmask_folder}/swmasked_image_{img_path.name}"
         output_path = output_folder / img_path
 
         cv2.imwrite(str(wmaskpath), wmask)
@@ -102,6 +103,7 @@ if __name__ == "__main__":
         cv2.imwrite(str(domaskpath), domask)
 
         cv2.imwrite(str(swmaskpath), sw)
+
         cross_position = find_red_cross_boxes(warped)
         vis = warped.copy()
         draw_detections_on_warp(
