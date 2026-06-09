@@ -30,7 +30,7 @@ def detect_balls_by_hsv(warped_bgr, lower, upper, min_area=150, max_area=400, mi
             continue
 
         (x, y), r = cv2.minEnclosingCircle(c)
-        realx, realy = px_to_world_cm(x, y, warp_w_px=warped_bgr.shape[1], warp_h_px=warped_bgr.shape[0])
+        realx, realy = px_to_world_cm(x, y, warp_w_px=warped_bgr.shape[0], warp_h_px=warped_bgr.shape[1])
         detections.append((float(realx), float(realy), int(x), int(y), int(r), float(area), float(circularity)))
 
     # Optional: sort biggest first (often helps stability)
@@ -39,36 +39,79 @@ def detect_balls_by_hsv(warped_bgr, lower, upper, min_area=150, max_area=400, mi
     return detections, mask
 
 #Coordinates
-def px_to_world_cm(x_px, y_px, warp_w_px, warp_h_px, court_w_cm=120.0, court_h_cm=180.0):
-    cm_per_px_x = court_w_cm / warp_w_px
-    cm_per_px_y = court_h_cm / warp_h_px
+def px_to_world_cm(
+    x_px,
+    y_px,
+    warp_w_px=800,
+    warp_h_px=1200,
+    border_px=50,
+    court_w_cm=125.0,
+    court_h_cm=170.0
+):
+    court_w_px = warp_w_px - 2 * border_px
+    court_h_px = warp_h_px - 2 * border_px
 
-    x_cm = x_px * cm_per_px_x
-    y_cm_from_top = y_px * cm_per_px_y
-    y_cm_from_bottom = court_h_cm - y_cm_from_top
-    return x_cm, y_cm_from_bottom
+    # Convert image pixel coordinate to court-local pixel coordinate
+    x_local_px = x_px - border_px
+    y_local_px = y_px - border_px
+
+    cm_per_px_x = court_w_cm / court_w_px
+    cm_per_px_y = court_h_cm / court_h_px
+
+    x_cm = x_local_px * cm_per_px_x
+
+    # y = 0 at bottom of court
+    y_cm_from_top = y_local_px * cm_per_px_y
+    y_cm = court_h_cm - y_cm_from_top
+
+    return x_cm, y_cm
 
 #Coordinates
-def world_cm_to_px(x_cm, y_cm, warp_w_px=800, warp_h_px=1200, court_w_cm=120.0, court_h_cm=180.0):
-    cm_per_px_x = court_w_cm / warp_w_px
-    cm_per_px_y = court_h_cm / warp_h_px
+def world_cm_to_px(
+    x_cm,
+    y_cm,
+    img_w_px=800,
+    img_h_px=1200,
+    border_px=50,
+    court_w_cm=125.0,
+    court_h_cm=170.0
+):
+    court_w_px = img_w_px - 2 * border_px
+    court_h_px = img_h_px - 2 * border_px
 
-    x_px = x_cm / cm_per_px_x
-    y_px_from_top = y_cm / cm_per_px_y
-    y_px_from_bottom = warp_h_px - y_px_from_top
-    return int(x_px), int(y_px_from_bottom)
+    cm_per_px_x = court_w_cm / court_w_px
+    cm_per_px_y = court_h_cm / court_h_px
+
+    x_local_px = x_cm / cm_per_px_x
+
+    # y_cm is measured from bottom, but image y is measured from top
+    y_px_from_top_inside_court = (court_h_cm - y_cm) / cm_per_px_y
+
+    # Add the 50 px border back
+    x_px = x_local_px + border_px
+    y_px = y_px_from_top_inside_court + border_px
+
+    return int(round(x_px)), int(round(y_px))
 
 #Requires court to be uniform to work correctly
-def radius_cm_to_px(radius_cm, warp_w_px=800, warp_h_px=1200, court_w_cm=120.0, court_h_cm=180.0):
-    cm_per_px_x = court_w_cm / warp_w_px
-    return int(radius_cm / cm_per_px_x)
+def radius_cm_to_px(
+    radius_cm,
+    warp_w_px=800,
+    warp_h_px=1200,
+    border_px=50,
+    court_w_cm=125.0,
+    court_h_cm=170.0
+):
+    court_w_px = warp_w_px - 2 * border_px
+    cm_per_px_x = court_w_cm / court_w_px
+    return int(round(radius_cm / cm_per_px_x))
 
 def draw_detections_on_warp(
     warped_bgr,
     detections,
     label_prefix,
     warp_w_px, warp_h_px,
-    court_w_cm=120.0, court_h_cm=180.0,
+    court_w_cm=125.0, court_h_cm=170.0,
 ):
     for i, (realx_cm, realy_cm, x_px, y_px, r_px, area, circ) in enumerate(detections):
 
@@ -88,13 +131,17 @@ def draw_detections_on_warp(
             2,
             cv2.LINE_AA
         )
-        
-def draw_cross_on_warp(img, cross_data,
-                       warp_w_px, warp_h_px,
-                       court_w_cm, court_h_cm):
+
+def draw_cross_on_warp(
+    img,
+    cross_data,
+    warp_w_px,
+    warp_h_px,
+    court_w_cm=125.0,
+    court_h_cm=170.0,
+    border_px=50
+):
     if cross_data is None:
-        return img
-    if len(cross_data) != 3:
         return img
 
     cv2.drawContours(img, [cross_data["vertical_box"]], 0, (0, 255, 0), 2)
@@ -103,12 +150,26 @@ def draw_cross_on_warp(img, cross_data,
     cx, cy = cross_data["center"]
     cv2.circle(img, (cx, cy), 5, (0, 255, 255), -1)
 
-    x_cm = cx * court_w_cm / warp_w_px
-    y_cm = cy * court_h_cm / warp_h_px
+    x_cm, y_cm = px_to_world_cm(
+        cx,
+        cy,
+        warp_w_px=warp_w_px,
+        warp_h_px=warp_h_px,
+        border_px=border_px,
+        court_w_cm=court_w_cm,
+        court_h_cm=court_h_cm
+    )
 
     label = f"Cross: ({x_cm:.1f}cm, {y_cm:.1f}cm)"
-    cv2.putText(img, label, (cx + 10, cy - 10),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+    cv2.putText(
+        img,
+        label,
+        (cx + 10, cy - 10),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.7,
+        (255, 255, 255),
+        2
+    )
 
     return img
         

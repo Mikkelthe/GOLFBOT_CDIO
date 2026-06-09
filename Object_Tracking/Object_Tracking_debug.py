@@ -14,6 +14,7 @@ import cv2
 import numpy as np
 from pathlib import Path
 
+
 if __name__ == "__main__":
     start_i = 22
     i = start_i
@@ -24,7 +25,8 @@ if __name__ == "__main__":
         
     # ---- Court settings ----
     WARP_W, WARP_H = 1200, 800
-    COURT_W_CM, COURT_H_CM = 180.0, 120.0
+    COURT_W_CM, COURT_H_CM = 170.0, 125.0
+
     if i < imagecount:
         videodevice = cv2.VideoCapture(1)
         videodevice.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
