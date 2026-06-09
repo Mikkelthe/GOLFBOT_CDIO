@@ -106,13 +106,11 @@ def find_box_corners_by_hough(img_bgr):
     # intersections: TL, TR, BR, BL
     tl = line_intersection(T, L)
     tr = line_intersection(T, R)
-    print(tr)
-    print(tl)
     br = line_intersection(B, R)
     bl = line_intersection(B, L)
+    # padding the corners, to get a bit outside the arena aswell
     tr[0] += 50
     tr[1] += -50
-    print(tr)
     tl[0] += -50
     tl[1] += -50
     br[0] += 50
@@ -395,6 +393,7 @@ def find_arena(img, out_w, out_h):
     corners = find_box_corners_by_hough(img)
     if corners is None:
         return None, None
+
     M = cv2.getPerspectiveTransform(corners.astype(np.float32), dst)
     warped = cv2.warpPerspective(img, M, (out_w, out_h))
     return warped
