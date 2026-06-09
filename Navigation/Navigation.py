@@ -1,13 +1,10 @@
 import math
-
 import cv2
 import numpy as np
 from pathlib import Path
-
-from BotDetector.ArUcoDetector import find_bot
 from point import *
 from Object_Tracking.Object_Tracking import *
-import MoveBot.MoveBot
+
 
 #find distance between two points (fx. bot and ball)
 def find_distance_between_points(point1: Point, point2: Point):
@@ -33,6 +30,38 @@ def find_turn(current_heading, point1, point2):
         turn_angle = 0
 
     return turn_flag, turn_angle
+
+def find_bot(image):
+    aruco_dict = cv2.aruco.getPredefinedDictionary(
+        cv2.aruco.DICT_4X4_50
+    )
+
+    detector = cv2.aruco.ArucoDetector(aruco_dict)
+
+    corners, ids, rejected = detector.detectMarkers(image)
+
+    if ids is not None:
+        pts = corners[0][0]
+
+        center = Point(*np.mean(pts, axis=0))
+
+        # Marker top edge
+        top_left = pts[0]
+        top_right = pts[1]
+
+        heading = top_right - top_left
+
+        angle = np.degrees(
+            np.arctan2(heading[1], heading[0])
+        )
+        #for debugging
+        #print("Center:", center)
+        #print("Orientation:", angle)
+    return center, angle
+
+#for debugging
+#image = cv2.imread("arena3.jpg")
+#find_bot(image)
 
 #find and set image folder/files
 base_path = Path(__file__).resolve().parent
@@ -63,7 +92,7 @@ draw_detections_on_warp(warped, white_ball, "position", warp_w_px=WARP_W, warp_h
 
 #heading measures from x-axis and goes counter-clockwise
 botCoordinates, currentHeading = find_bot(warped)
-botCoordinates = tuple(botCoordinates.astype(int))
+#botCoordinates = tuple(botCoordinates.astype(int))
 
 
 #ball coordinates
@@ -82,10 +111,9 @@ bot_height_px = cm_to_px(bot_height_cm)
 ratio_height = cam_height_px / (cam_height_px - bot_height_px)
 
 
-x, y = botCoordinates
 center_to_bot_dist = find_distance_between_points(center_point,botCoordinates)
-x_ratio = int(x / ratio_height)
-y_ratio = int(y / ratio_height)
+x_ratio = int(botCoordinates.x / ratio_height)
+y_ratio = int(botCoordinates.y / ratio_height)
 botCoordinates = x_ratio, y_ratio
 
 
