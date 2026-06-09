@@ -47,8 +47,8 @@ if __name__ == "__main__":
 
         orange_balls, omask = detect_balls_by_hsv(warped, lower=(10,150,150), upper=(50,255,255))
         dark_orange_balls, domask = detect_balls_by_hsv(warped, lower=(5,120,120), upper=(45,255,255))
-        white_balls, wmask   = detect_balls_by_hsv(warped, lower=(0, 0, 200), upper=(255, 60, 255))
-        shadowywhite_balls, sw = detect_balls_by_hsv(warped,lower=(0,0,145), upper=(45,125,255))
+        white_balls, wmask   = detect_balls_by_hsv(warped, lower=(0, 0, 220), upper=(255, 60, 255))
+        shadowywhite_balls, sw = detect_balls_by_hsv(warped,lower=(0,0,145), upper=(45,125,230))
         wmaskpath = f"wmasked_image_{i}.jpg"
         omaskpath = f"omasked_image_{i}.jpg"
         domaskpath = f"domasked_image_{i}.jpg"
@@ -118,10 +118,10 @@ if __name__ == "__main__":
         if warped is None:
             raise RuntimeError("Could not find arena")
 
-        orange_balls, omask = detect_balls_by_hsv(warped, lower=(15, 150, 150), upper=(45, 255, 255))
+        orange_balls, omask = detect_balls_by_hsv(warped, lower=(10, 70, 215), upper=(55, 255, 255))
         dark_orange_balls, domask = detect_balls_by_hsv(warped, lower=(5, 120, 120), upper=(45, 255, 255))
-        white_balls, wmask = detect_balls_by_hsv(warped, lower=(0, 0, 200), upper=(255, 60, 255))
-        shadowywhite_balls, sw = detect_balls_by_hsv(warped, lower=(0, 0, 145), upper=(45, 125, 255))
+        white_balls, wmask = detect_balls_by_hsv(warped, lower=(0, 0, 220), upper=(255, 60, 255))
+        shadowywhite_balls, sw = detect_balls_by_hsv(warped, lower=(0, 0, 115), upper=(180, 125, 240))
 
         mask_folder = base_path.parent / "masks_Images"
         mask_folder.mkdir(exist_ok=True)

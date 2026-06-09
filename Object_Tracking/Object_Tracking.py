@@ -6,10 +6,10 @@ from .Course_detecter import find_red_cross_center
 from .Course_detecter import find_red_cross_boxes
 
 
-def detect_balls_by_hsv(warped_bgr, lower, upper, min_area=150, max_area=2000, min_circularity=0.75):
+def detect_balls_by_hsv(warped_bgr, lower, upper, min_area=150, max_area=400, min_circularity=0.70):
     hsv = cv2.cvtColor(warped_bgr, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
-    mask = cv2.erode(mask, np.ones((5, 5), np.uint8), iterations=1)
+    mask = cv2.erode(mask, np.ones((5,5), np.uint8), iterations=1)
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((5,5), np.uint8), iterations=1)
 
 
