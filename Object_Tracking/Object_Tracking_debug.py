@@ -73,10 +73,10 @@ if __name__ == "__main__":
         if warped is None:
             raise RuntimeError("Could not find arena")
 
-        orange_balls, omask = detect_balls_by_hsv(warped, lower=(10, 70, 215), upper=(55, 255, 255))
-        dark_orange_balls, domask = detect_balls_by_hsv(warped, lower=(5, 120, 120), upper=(45, 255, 255))
-        white_balls, wmask = detect_balls_by_hsv(warped, lower=(0, 0, 220), upper=(255, 60, 255))
-        shadowywhite_balls, sw = detect_balls_by_hsv(warped, lower=(0, 0, 115), upper=(180, 125, 240))
+        orange_balls, omask = detect_balls_by_hsv(warped, lower=(15, 120, 150), upper=(70, 255, 255))
+        dark_orange_balls, domask = detect_balls_by_hsv(warped, lower=(15, 120, 120), upper=(45, 255, 255))
+        white_balls, wmask = detect_balls_by_hsv(warped, lower=(0, 0, 220), upper=(180, 60, 255))
+        shadowywhite_balls, sw = detect_balls_by_hsv(warped, lower=(0, 0, 30), upper=(180, 80, 245))
 
         mask_folder = base_path.parent / "masks_Images"
         mask_folder.mkdir(exist_ok=True)
