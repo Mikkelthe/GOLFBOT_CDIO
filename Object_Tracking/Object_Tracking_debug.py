@@ -22,82 +22,27 @@ if __name__ == "__main__":
     # ---- Court settings ----
     WARP_W, WARP_H = 1200, 800
     COURT_W_CM, COURT_H_CM = 180.0, 120.0
-    videodevice = False
-    """
-    videodevice = cv2.VideoCapture(1)
+
+    videodevice = cv2.VideoCapture(2)
     videodevice.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
     videodevice.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-    """
-    while i < 0:
+
+    while i < 20:
         i += 1
         print("i got here")
 
         ret, img = videodevice.read()
         print("i took picture")
-        videocapturedimagepath = f"captured_image_{i}.jpg"
+        videocapturedimagepath = f"Images/captured_image_{i}.jpg"
 
         # Show results
-        output_path = output_folder / videocapturedimagepath
+        output_path = base_path.parent / videocapturedimagepath
         cv2.imwrite(str(output_path), img)
         print("I saved image")
-        warped = find_arena(img, out_w=WARP_W, out_h=WARP_H)
-        if warped is None:
-            print("i failed to find warped")
-            raise RuntimeError("Could not find arena")
 
-        orange_balls, omask = detect_balls_by_hsv(warped, lower=(10,150,150), upper=(50,255,255))
-        dark_orange_balls, domask = detect_balls_by_hsv(warped, lower=(5,120,120), upper=(45,255,255))
-        white_balls, wmask   = detect_balls_by_hsv(warped, lower=(0, 0, 220), upper=(255, 60, 255))
-        shadowywhite_balls, sw = detect_balls_by_hsv(warped,lower=(0,0,145), upper=(45,125,230))
-        wmaskpath = f"wmasked_image_{i}.jpg"
-        omaskpath = f"omasked_image_{i}.jpg"
-        domaskpath = f"domasked_image_{i}.jpg"
-        swmaskpath = f"swmasked_image_{i}.jpg"
-        output_path = output_folder / videocapturedimagepath
-        cv2.imwrite(str(wmaskpath),wmask)
-        cv2.imwrite(str(omaskpath),omask)
-        cv2.imwrite(str(domaskpath),domask)
-        cv2.imwrite(str(swmaskpath),sw)
-        cross_position = find_red_cross_boxes(warped)
-        if cross_position is None:
-            print("i failed to find cross_center")
-        else:
-            print(len(cross_position))
-            print(cross_position)
-        print(len(orange_balls),len(white_balls))
-        vis = warped.copy()
-        draw_detections_on_warp(
-            vis, orange_balls, "O",
-            warp_w_px=WARP_W, warp_h_px=WARP_H,
-            court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM,
-        )
-        draw_detections_on_warp(
-            vis, dark_orange_balls, "dO",
-            warp_w_px=WARP_W, warp_h_px=WARP_H,
-            court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM,
-        )
-        draw_detections_on_warp(
-            vis, shadowywhite_balls, "swO",
-            warp_w_px=WARP_W, warp_h_px=WARP_H,
-            court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM,
-        )
-        draw_detections_on_warp(
-            vis, white_balls, "W",
-            warp_w_px=WARP_W, warp_h_px=WARP_H,
-            court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM,
-        )
-        draw_cross_on_warp(
-            vis, cross_position,
-            warp_w_px=WARP_W, warp_h_px=WARP_H,
-            court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM,
-        )
-        videocapturedimagepath = f"captured_image_changed_{i}.jpg"
-        # Show results
-        output_path = output_folder / videocapturedimagepath
-        cv2.imwrite(str(output_path), vis)
-        
+
     images_folder = base_path.parent / "Images"
-    #videodevice.release()
+    videodevice.release()
     
 
     

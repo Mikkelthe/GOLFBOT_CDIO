@@ -106,9 +106,19 @@ def find_box_corners_by_hough(img_bgr):
     # intersections: TL, TR, BR, BL
     tl = line_intersection(T, L)
     tr = line_intersection(T, R)
+    print(tr)
+    print(tl)
     br = line_intersection(B, R)
     bl = line_intersection(B, L)
-
+    tr[0] += 50
+    tr[1] += -50
+    print(tr)
+    tl[0] += -50
+    tl[1] += -50
+    br[0] += 50
+    br[1] += 50
+    bl[0] += -50
+    bl[1] += 50
     if any(p is None for p in [tl, tr, br, bl]):
         return None, red, edges
 
@@ -132,7 +142,24 @@ def touches_border(contour, img_w, img_h, margin=5):
 
 
 def find_red_cross_contour(img_bgr):
-    hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
+    img_h, img_w = img_bgr.shape[:2]
+
+    # Middle search area size
+    roi_w = 400
+    roi_h = 300
+
+    # Calculate centered ROI
+    x0 = max(0, img_w // 2 - roi_w // 2)
+    y0 = max(0, img_h // 2 - roi_h // 2)
+    x1 = min(img_w, x0 + roi_w)
+    y1 = min(img_h, y0 + roi_h)
+
+    # Crop image to only middle area
+    roi_bgr = img_bgr[y0:y1, x0:x1]
+    #debug = roi_bgr.copy()
+    #cv2.imwrite("debug_middle_roi.png", debug)
+
+    hsv = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2HSV)
     red_mask = hsv_mask_red(hsv)
 
     kernel = np.ones((5, 5), np.uint8)
@@ -176,7 +203,17 @@ def find_red_cross_contour(img_bgr):
         return None, red_mask
 
     cross_contour = max(contours, key=cv2.contourArea)
-    return cross_contour, cross_mask
+    cross_contour = cross_contour + np.array([[[x0, y0]]], dtype=np.int32)
+
+
+    full_mask = np.zeros((img_h, img_w), dtype=np.uint8)
+    full_mask[y0:y1, x0:x1] = cross_mask
+
+    #debug_mask = full_mask.copy()
+    #cv2.imwrite("debug_mask.png", debug_mask)
+
+
+    return cross_contour, full_mask
 
 def find_red_cross_boxes(img_bgr):
     cross_contour, cross_mask = find_red_cross_contour(img_bgr)
