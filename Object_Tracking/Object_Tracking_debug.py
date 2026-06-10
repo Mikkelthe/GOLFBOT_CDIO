@@ -24,7 +24,7 @@ if __name__ == "__main__":
     imagecount = 20
         
     # ---- Court settings ----
-    WARP_W, WARP_H = 1200, 800
+    WARP_W, WARP_H = 1500, 1000
     COURT_W_CM, COURT_H_CM = 170.0, 125.0
 
     if i < imagecount:

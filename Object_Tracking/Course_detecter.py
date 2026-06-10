@@ -109,14 +109,15 @@ def find_box_corners_by_hough(img_bgr):
     br = line_intersection(B, R)
     bl = line_intersection(B, L)
     # padding the corners, to get a bit outside the arena aswell
-    tr[0] += 100
-    tr[1] += -100
-    tl[0] += -100
-    tl[1] += -100
-    br[0] += 100
-    br[1] += 100
-    bl[0] += -100
-    bl[1] += 100
+    padding = 100
+    tr[0] += padding
+    tr[1] += -padding
+    tl[0] += -padding
+    tl[1] += -padding
+    br[0] += padding
+    br[1] += padding
+    bl[0] += -padding
+    bl[1] += padding
     if any(p is None for p in [tl, tr, br, bl]):
         return None, red, edges
 

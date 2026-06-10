@@ -42,8 +42,8 @@ def detect_balls_by_hsv(warped_bgr, lower, upper, min_area=100, max_area=800, mi
 def px_to_world_cm(
     x_px,
     y_px,
-    warp_w_px=800,
-    warp_h_px=1200,
+    warp_w_px,
+    warp_h_px,
     border_px=100,
     court_w_cm=125.0,
     court_h_cm=170.0
