@@ -28,7 +28,7 @@ while run:
 
     vis = frame.copy()
 
-    orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position = find_objects_in_image(frame)
+    orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position = find_objects_in_image(frame, WARP_W, WARP_H)
 
     draw_detections_on_warp(
         vis, orange_balls, "O",
