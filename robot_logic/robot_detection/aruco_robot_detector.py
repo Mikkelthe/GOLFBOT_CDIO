@@ -10,8 +10,9 @@ from robot_logic.route_planning.route_planner import Point
 
 
 DEFAULT_MARKER_ID = 0
-DEFAULT_WARP_W = 800
-DEFAULT_WARP_H = 1200
+DEFAULT_WARP_W = 1200
+DEFAULT_WARP_H = 800
+MARKER_TO_ROBOT_HEADING_OFFSET_DEGREES = 90.0
 
 
 @dataclass(frozen=True)
@@ -48,6 +49,9 @@ def detect_robot_pose(
         return None
 
     arena_corners = find_box_corners_by_hough(raw_image)
+    if isinstance(arena_corners, tuple):
+        arena_corners = arena_corners[0]
+
     if arena_corners is None:
         return None
 
@@ -71,7 +75,9 @@ def detect_robot_pose(
 
     dx_world = top_mid_x - center_x
     dy_world = -(top_mid_y - center_y)
-    heading_degrees = degrees(atan2(dy_world, dx_world))
+    marker_heading_degrees = degrees(atan2(dy_world, dx_world))
+    # The robot faces 90 degrees counterclockwise from the marker top edge.
+    heading_degrees = marker_heading_degrees + MARKER_TO_ROBOT_HEADING_OFFSET_DEGREES
 
     return RobotPose(
         position=Point(position_x_cm, position_y_cm),
