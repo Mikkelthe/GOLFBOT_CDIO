@@ -24,21 +24,25 @@ if __name__ == "__main__":
     imagecount = 20
         
     # ---- Court settings ----
-    WARP_W, WARP_H = 1200, 800
+    WARP_W, WARP_H = 1500, 1000
     COURT_W_CM, COURT_H_CM = 170.0, 125.0
 
     if i < imagecount:
         videodevice = cv2.VideoCapture(1)
         videodevice.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
         videodevice.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-        time.sleep(5)
+        time.sleep(2)
+        j = 1
+        while j < 10:
+            j += 1
+            print(f"image warm up {j}")
+            videodevice.read()
     start_time = time.time()
     while i < imagecount:
         i += 1
         if i%5 == 0:
             print("move")
-            time.sleep(10)
-
+            time.sleep(1)
         ret, img = videodevice.read()
         videocapturedimagepath = f"Images/captured_image_{i}.jpg"
 
@@ -73,10 +77,10 @@ if __name__ == "__main__":
         if warped is None:
             raise RuntimeError("Could not find arena")
 
-        orange_balls, omask = detect_balls_by_hsv(warped, lower=(15, 120, 150), upper=(70, 255, 255))
-        dark_orange_balls, domask = detect_balls_by_hsv(warped, lower=(15, 120, 120), upper=(45, 255, 255))
-        white_balls, wmask = detect_balls_by_hsv(warped, lower=(0, 0, 220), upper=(180, 60, 255))
-        shadowywhite_balls, sw = detect_balls_by_hsv(warped, lower=(0, 0, 30), upper=(180, 80, 245))
+        orange_balls, omask = detect_balls_by_hsv(warped, lower=(5, 140, 160), upper=(40, 255, 255))
+        dark_orange_balls, domask = detect_balls_by_hsv(warped, lower=(5, 120, 120), upper=(30, 255, 255))
+        white_balls, wmask = detect_balls_by_hsv(warped, lower=(0, 0, 190), upper=(180, 80, 255))
+        shadowywhite_balls, sw = detect_balls_by_hsv(warped, lower=(30, 0, 30), upper=(180, 35, 240))
 
         mask_folder = base_path.parent / "masks_Images"
         mask_folder.mkdir(exist_ok=True)
