@@ -6,7 +6,7 @@ from .Course_detecter import find_red_cross_center
 from .Course_detecter import find_red_cross_boxes
 
 
-def detect_balls_by_hsv(warped_bgr, lower, upper, min_area=100, max_area=800, min_circularity=0.60):
+def detect_balls_by_hsv(warped_bgr, lower, upper, min_area=125, max_area=800, min_circularity=0.65):
     hsv = cv2.cvtColor(warped_bgr, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
     mask = cv2.erode(mask, np.ones((5,5), np.uint8), iterations=1)
@@ -30,7 +30,9 @@ def detect_balls_by_hsv(warped_bgr, lower, upper, min_area=100, max_area=800, mi
             continue
 
         (x, y), r = cv2.minEnclosingCircle(c)
-        realx, realy = px_to_world_cm(x, y, warp_w_px=warped_bgr.shape[0], warp_h_px=warped_bgr.shape[1])
+        width = warped_bgr.shape[1]
+        height = warped_bgr.shape[0]
+        realx, realy = px_to_world_cm(x, y, warp_w_px=width, warp_h_px=height)
         detections.append((float(realx), float(realy), int(x), int(y), int(r), float(area), float(circularity)))
 
     # Optional: sort biggest first (often helps stability)
@@ -42,11 +44,11 @@ def detect_balls_by_hsv(warped_bgr, lower, upper, min_area=100, max_area=800, mi
 def px_to_world_cm(
     x_px,
     y_px,
-    warp_w_px=800,
-    warp_h_px=1200,
+    warp_w_px,
+    warp_h_px,
     border_px=100,
-    court_w_cm=125.0,
-    court_h_cm=170.0
+    court_w_cm=170.0,
+    court_h_cm=125.0
 ):
     court_w_px = warp_w_px - 2 * border_px
     court_h_px = warp_h_px - 2 * border_px
@@ -70,11 +72,11 @@ def px_to_world_cm(
 def world_cm_to_px(
     x_cm,
     y_cm,
-    img_w_px=800,
-    img_h_px=1200,
+    img_w_px,
+    img_h_px,
     border_px=100,
-    court_w_cm=125.0,
-    court_h_cm=170.0
+    court_w_cm=170.0,
+    court_h_cm=125.0
 ):
     court_w_px = img_w_px - 2 * border_px
     court_h_px = img_h_px - 2 * border_px
@@ -99,8 +101,8 @@ def cm_to_px(
     warp_w_px=800,
     warp_h_px=1200,
     border_px=100,
-    court_w_cm=125.0,
-    court_h_cm=170.0
+    court_w_cm=170.0,
+    court_h_cm=125.0
 ):
     court_w_px = warp_w_px - 2 * border_px
     cm_per_px_x = court_w_cm / court_w_px
@@ -142,6 +144,8 @@ def draw_cross_on_warp(
     border_px=50
 ):
     if cross_data is None:
+        return img
+    if len(cross_data) != 3:
         return img
 
     cv2.drawContours(img, [cross_data["vertical_box"]], 0, (0, 255, 0), 2)
