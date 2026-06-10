@@ -9,7 +9,44 @@ from Object_Tracking.Object_Tracking import *
 #kan ikke se AruCo ved kanten
 #bane/pixel problem?
 
-#find distance between two points (fx. bot and ball)
+# find the relative vector from corner to bot
+# project this vector onto optimal approach vector
+# calculate nearest coordinate point on optimal approach
+def find_optimal_corner_approach(cornerPosition: Point, botPosition: Point):
+
+    b = Point(0,0)
+
+    # top left corner
+    if cornerPosition.x < WARP_W/3 and cornerPosition.y < WARP_H/3:
+        b = Point(1,1)
+    # top right corner
+    elif cornerPosition.x > WARP_W*2/3 and cornerPosition.y < WARP_H/3:
+        b = Point(-1,1)
+    # bottom left corner
+    elif cornerPosition.x < WARP_W/3 and cornerPosition.y > WARP_H*2/3:
+        b = Point(1,-1)
+    # bottom right corner
+    elif cornerPosition.x < WARP_W / 3 and cornerPosition.y > WARP_H * 2 / 3:
+        b = Point(-1, -1)
+    else:
+        raise ValueError("Corner position correct")
+
+
+    relative_vector = Point(botPosition.x - cornerPosition.x,
+                            botPosition.y - cornerPosition.y)
+
+    vector_factor = (relative_vector.x * b.x + relative_vector.y * b.y) / (b.x **2 + b.y **2)
+
+    optimal_approach_vector = Point(b.x * vector_factor,
+                                    b.y * vector_factor)
+
+    optimal_position = Point(optimal_approach_vector.x - cornerPosition.x, optimal_approach_vector.y - cornerPosition.y)
+
+    return optimal_position
+
+
+
+#find distance between two points (for example: bot and ball)
 def find_distance_between_points(point1: Point, point2: Point):
     return np.sqrt(np.square(point2.x - point1.x) + np.square(point2.y - point1.y))
 
@@ -21,7 +58,6 @@ def find_turn(current_heading, point1, point2):
 
     # Normalize to [-180, 180]
     delta = (delta_direction + 180) % 360 - 180
-
     if delta > 0:
         turn_flag = "right"
         turn_angle = delta  # Degrees to turn
