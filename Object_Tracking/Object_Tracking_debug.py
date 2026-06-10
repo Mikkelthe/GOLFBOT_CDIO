@@ -79,8 +79,8 @@ if __name__ == "__main__":
 
         orange_balls, omask = detect_balls_by_hsv(warped, lower=(5, 140, 160), upper=(40, 255, 255))
         dark_orange_balls, domask = detect_balls_by_hsv(warped, lower=(5, 120, 120), upper=(30, 255, 255))
-        white_balls, wmask = detect_balls_by_hsv(warped, lower=(0, 0, 190), upper=(180, 80, 255))
-        shadowywhite_balls, sw = detect_balls_by_hsv(warped, lower=(30, 0, 30), upper=(180, 35, 240))
+        white_balls, wmask = detect_balls_by_hsv(warped, lower=(0, 0, 180), upper=(180, 90, 255))
+        shadowywhite_balls, sw = detect_balls_by_hsv(warped, lower=(0, 0, 30), upper=(180, 20, 240))
 
         mask_folder = base_path.parent / "masks_Images"
         mask_folder.mkdir(exist_ok=True)
