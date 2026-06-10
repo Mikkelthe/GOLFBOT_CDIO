@@ -1,11 +1,13 @@
 import cv2
 import numpy as np
+from matplotlib.image import imsave
+
 
 def hsv_mask_red(hsv):
     # red wraps hue -> two ranges
-    lower1 = np.array([0, 80, 60])
-    upper1 = np.array([10, 255, 255])
-    lower2 = np.array([170, 80, 60])
+    lower1 = np.array([0, 40, 30])
+    upper1 = np.array([30, 255, 255])
+    lower2 = np.array([150, 40, 30])
     upper2 = np.array([180, 255, 255])
     return cv2.inRange(hsv, lower1, upper1) | cv2.inRange(hsv, lower2, upper2)
 
@@ -30,7 +32,8 @@ def normalize_line_from_rho_theta(rho, theta):
 def find_box_corners_by_hough(img_bgr):
     hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
     red = hsv_mask_red(hsv)
-
+    debug = red.copy()
+    cv2.imwrite("debug_red.png", debug)
     
     k = np.ones((7,7), np.uint8)
     red = cv2.morphologyEx(red, cv2.MORPH_CLOSE, k, iterations=2)
