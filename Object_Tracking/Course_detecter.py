@@ -118,7 +118,7 @@ def find_box_corners_by_hough(img_bgr):
     bl[0] += -100
     bl[1] += 100
     if any(p is None for p in [tl, tr, br, bl]):
-        return None, red, edges
+        return None
 
     corners = np.stack([tl, tr, br, bl], axis=0)
 
@@ -494,7 +494,7 @@ def find_arena(img, out_w, out_h):
     dst = np.array([[0,0],[out_w,0],[out_w,out_h],[0,out_h]], dtype=np.float32)
     corners = find_box_corners_by_hough(img)
     if corners is None:
-        return None, None
+        return img
 
     M = cv2.getPerspectiveTransform(corners.astype(np.float32), dst)
     warped = cv2.warpPerspective(img, M, (out_w, out_h))
