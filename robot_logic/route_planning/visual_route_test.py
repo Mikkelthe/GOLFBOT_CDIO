@@ -6,6 +6,7 @@ import cv2
 from Object_Tracking.Course_detecter import find_arena
 from Object_Tracking.Object_Tracking import find_objects_in_image, px_to_world_cm, world_cm_to_px
 from robot_logic.robot_detection.aruco_robot_detector import detect_robot_pose
+from robot_logic.route_planning.pathfinder import plan_path
 from robot_logic.route_planning.route_planner import (
     CROSS_SAFETY_RADIUS_CM,
     FIELD_HEIGHT_CM,
@@ -13,7 +14,6 @@ from robot_logic.route_planning.route_planner import (
     Ball,
     Goal,
     Point,
-    build_path_points,
     choose_route,
 )
 
@@ -160,14 +160,21 @@ if __name__ == "__main__":
     goal_a = Goal(name="Goal A", position=GOAL_A_POSITION)
     planned_route = choose_route(robot_pose.position, balls, goal_a)
     cross_point = get_cross_point(cross_position)
-    base_path_points = [robot_pose.position] + [target.pickup_point for target in planned_route] + [goal_a.position]
-    path_points = build_path_points(
-        robot_pose.position,
-        planned_route,
-        goal_a,
-        cross_center=cross_point,
-        cross_safety_radius_cm=CROSS_SAFETY_RADIUS_CM,
-    )
+    route_points = [robot_pose.position] + [target.pickup_point for target in planned_route] + [goal_a.position]
+    path_points: list[Point] = []
+    failed_astar_segments = 0
+
+    for start_point, end_point in zip(route_points, route_points[1:]):
+        segment_path = plan_path(start_point, end_point, cross_point, CROSS_SAFETY_RADIUS_CM)
+
+        if not segment_path:
+            failed_astar_segments += 1
+            continue
+
+        if path_points:
+            path_points.extend(segment_path[1:])
+        else:
+            path_points.extend(segment_path)
 
     robot_heading_radians = radians(robot_pose.heading_degrees)
     heading_end_point = Point(
@@ -229,20 +236,12 @@ if __name__ == "__main__":
             1,
             tipLength=0.25,
         )
-    for point in path_points[1:-1]:
-        if not any(same_point(point, base_point) for base_point in base_path_points):
-            cv2.circle(warped_image, to_pixel_point(point), 5, (255, 180, 0), -1)
-            draw_label(warped_image, "D", point, (255, 180, 0))
-
     for start_point, end_point in zip(path_points, path_points[1:]):
-        cv2.arrowedLine(
-            warped_image,
-            to_pixel_point(start_point),
-            to_pixel_point(end_point),
-            (0, 255, 0),
-            2,
-            tipLength=0.03,
-        )
+        cv2.line(warped_image, to_pixel_point(start_point), to_pixel_point(end_point), (0, 255, 0), 2)
+
+    print("A* pathfinding used: yes")
+    print(f"A* path points created: {len(path_points)}")
+    print(f"A* failed segments: {failed_astar_segments}")
 
     cv2.imwrite(OUTPUT_PATH, warped_image)
     print(f"Output path: {OUTPUT_PATH}")
