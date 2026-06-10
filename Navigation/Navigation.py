@@ -5,10 +5,6 @@ from pathlib import Path
 from point import *
 from Object_Tracking.Object_Tracking import *
 
-#kunne vi holde os til px så vidt som muligt og så kun konvertere til cm ved behov?
-#kan ikke se AruCo ved kanten
-#bane/pixel problem?
-
 # find the relative vector from corner to bot
 # project this vector onto optimal approach vector
 # calculate nearest coordinate point on optimal approach
@@ -103,10 +99,10 @@ images_folder = base_path.parent / "Images"
 image_files = list(images_folder.glob("*.jpg"))
 
 #load image
-img = cv2.imread("arena3.jpg")
+img = cv2.imread("arena.jpg")
 
 #picture dimensions center in pixel
-WARP_W, WARP_H = 1100, 700
+WARP_W, WARP_H = 1500, 1000
 CENTER_POINT_WARP = Point(WARP_W / 2, WARP_H / 2)
 
 #actual dimensions and center in cm
@@ -117,14 +113,16 @@ CENTER_POINT_CM = Point(COURT_W_CM / 2, COURT_H_CM / 2)
 warped = find_arena(img, out_w=WARP_W, out_h=WARP_H)
 
 #finds all objects in img
-orange_ball, white_ball, cross = find_objects_in_image(img, WARP_W, WARP_H)
+orange_ball, white_ball, dark_orange_balls, shadowywhite_balls, cross_position = find_objects_in_image(img, WARP_W, WARP_H)
 
 #draw objects on warped
-draw_detections_on_warp(warped, orange_ball, "position", warp_w_px=WARP_W, warp_h_px=WARP_H, court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM)
-draw_detections_on_warp(warped, white_ball, "position", warp_w_px=WARP_W, warp_h_px=WARP_H, court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM)
+#draw_detections_on_warp(warped, orange_ball, "position", warp_w_px=WARP_W, warp_h_px=WARP_H, court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM)
+#draw_detections_on_warp(warped, white_ball, "position", warp_w_px=WARP_W, warp_h_px=WARP_H, court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM)
 
 #heading measures from x-axis and goes counter-clockwise
 botCoordinates, currentHeading = find_bot(warped)
+
+#for debugging
 #botCoordinates = botCoordinates.x, botCoordinates.y
 
 #ball coordinates
@@ -133,29 +131,37 @@ white_y = white_ball[0][1]
 
 #convert from cm to pixel
 ballCoordinates = world_cm_to_px(white_x, white_y, WARP_W, WARP_H)
-botDimensions = world_cm_to_px(32, 32, WARP_W, WARP_H)
 
-#Calculate parallax distortion for bot
-cam_height_cm = 195
-cam_height_px = cm_to_px(cam_height_cm)
-bot_height_cm = 46
-bot_height_px = cm_to_px(bot_height_cm)
-ratio_height = cam_height_px / (cam_height_px - bot_height_px)
+# Calculate parallax distortion for bot
+cam_height_cm = 195.0
+bot_height_cm = 46.0
 
-center_to_bot_dist = find_distance_between_points(CENTER_POINT_WARP, botCoordinates)
-x_ratio = int(botCoordinates.x / ratio_height)
-y_ratio = int(botCoordinates.y / ratio_height)
-botCoordinates = x_ratio, y_ratio
+# scale factor to convert marker-plane radius -> ground-plane radius
+scale = (cam_height_cm - bot_height_cm) / cam_height_cm  # = 1 / ratio_height
+
+# botCoordinates is a Point returned by find_bot(warped)
+# center is CENTER_POINT_WARP (Point)
+dx = botCoordinates.x - CENTER_POINT_WARP.x
+dy = botCoordinates.y - CENTER_POINT_WARP.y
+
+ground_dx = dx * scale
+ground_dy = dy * scale
+
+ground_x = int(round(CENTER_POINT_WARP.x + ground_dx))
+ground_y = int(round(CENTER_POINT_WARP.y + ground_dy))
+
+# Update botCoordinates to the ground-projected pixel coordinates (use a Point if you prefer)
+botCoordinates = (ground_x, ground_y)
 
 
 #draw bot on warped (current bot radius is 16)
-warped = cv2.circle(warped, botCoordinates, cm_to_px(16), (0, 0, 255), 3)
+warped = cv2.circle(warped, botCoordinates, cm_to_px(16, warp_w_px=WARP_W, warp_h_px=WARP_H), (0, 0, 255), 3)
 
 #draw current heading from bot on warped
 arrow_length = 100 #px
 end_point = (
-    int(x_ratio + arrow_length * np.cos(np.radians(currentHeading))),
-    int(y_ratio + arrow_length * np.sin(np.radians(currentHeading)))
+    int(ground_x + arrow_length * np.cos(np.radians(currentHeading))),
+    int(ground_y + arrow_length * np.sin(np.radians(currentHeading)))
 )
 warped = cv2.arrowedLine(warped, botCoordinates, end_point, (0,0,255), 3)
 
