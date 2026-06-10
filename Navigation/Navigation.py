@@ -103,7 +103,7 @@ images_folder = base_path.parent / "Images"
 image_files = list(images_folder.glob("*.jpg"))
 
 #load image
-img = cv2.imread("arena4.jpg")
+img = cv2.imread("arena3.jpg")
 
 #picture dimensions center in pixel
 WARP_W, WARP_H = 1100, 700
