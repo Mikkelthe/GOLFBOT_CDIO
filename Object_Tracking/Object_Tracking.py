@@ -6,9 +6,12 @@ from .Course_detecter import find_red_cross_center
 from .Course_detecter import find_red_cross_boxes
 
 
-def detect_balls_by_hsv(warped_bgr, lower, upper, min_area=125, max_area=800, min_circularity=0.65):
+def detect_balls_by_hsv(warped_bgr, lower, upper, lower2=None, upper2=None, min_area=125, max_area=800, min_circularity=0.75):
     hsv = cv2.cvtColor(warped_bgr, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
+    if lower2 is None:
+        mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
+    else:
+        mask = cv2.inRange(hsv, np.array(lower), np.array(upper)) | cv2.inRange(hsv, np.array(lower2), np.array(upper2))
     mask = cv2.erode(mask, np.ones((5,5), np.uint8), iterations=1)
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((5,5), np.uint8), iterations=1)
 
@@ -30,8 +33,11 @@ def detect_balls_by_hsv(warped_bgr, lower, upper, min_area=125, max_area=800, mi
             continue
 
         (x, y), r = cv2.minEnclosingCircle(c)
+
         width = warped_bgr.shape[1]
         height = warped_bgr.shape[0]
+        if x < 100 or x > width-100 or y < 100 or y > height-100:
+            continue
         realx, realy = px_to_world_cm(x, y, warp_w_px=width, warp_h_px=height)
         detections.append((float(realx), float(realy), int(x), int(y), int(r), float(area), float(circularity)))
 
@@ -182,10 +188,15 @@ def find_objects_in_image(img_bgr,w,h):
     if warped is None:
         return None, None
 
-    orange_balls, omask = detect_balls_by_hsv(warped, lower=(10, 70, 215), upper=(55, 255, 255))
-    dark_orange_balls, domask = detect_balls_by_hsv(warped, lower=(5, 120, 120), upper=(45, 255, 255))
-    white_balls, wmask = detect_balls_by_hsv(warped, lower=(0, 0, 220), upper=(255, 60, 255))
-    shadowywhite_balls, sw = detect_balls_by_hsv(warped, lower=(0, 0, 115), upper=(180, 125, 240))
+    dilated = cv2.dilate(warped, np.ones((3,3), np.uint8), iterations=1)
+    blurred = cv2.medianBlur(dilated, 5)
+    kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+    sharpened = cv2.filter2D(blurred, -1, kernel)
+
+    orange_balls, omask = detect_balls_by_hsv(sharpened, lower=(0, 5, 120), upper=(40, 255, 255), lower2=(0, 0, 0), upper2=(180, 30, 50))
+    dark_orange_balls, domask = detect_balls_by_hsv(sharpened, lower=(5, 120, 120), upper=(30, 255, 255), lower2=(0, 0, 0), upper2=(180, 30, 50))
+    white_balls, wmask = detect_balls_by_hsv(sharpened, lower=(0, 0, 180), upper=(180, 90, 255), lower2=(0, 0, 0), upper2=(180, 30, 50))
+    shadowywhite_balls, sw = detect_balls_by_hsv(sharpened, lower=(0, 0, 140), upper=(180, 90, 250), lower2=(0, 0, 0), upper2=(180, 30, 75))
     
     cross_position = find_red_cross_boxes(warped)
 
@@ -195,4 +206,4 @@ def find_objects_in_image(img_bgr,w,h):
         print(len(cross_position))
         print(cross_position)
 
-    return orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position
+    return orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, omask, domask, wmask, sw
