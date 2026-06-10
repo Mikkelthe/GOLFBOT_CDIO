@@ -30,7 +30,7 @@ def detect_balls_by_hsv(warped_bgr, lower, upper, min_area=100, max_area=800, mi
             continue
 
         (x, y), r = cv2.minEnclosingCircle(c)
-        realx, realy = px_to_world_cm(x, y, warp_w_px=warped_bgr.shape[0], warp_h_px=warped_bgr.shape[1])
+        realx, realy = px_to_world_cm(x, y, warp_w_px=warped_bgr.shape[1], warp_h_px=warped_bgr.shape[0])
         detections.append((float(realx), float(realy), int(x), int(y), int(r), float(area), float(circularity)))
 
     # Optional: sort biggest first (often helps stability)
