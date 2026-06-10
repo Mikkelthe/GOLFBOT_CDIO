@@ -108,7 +108,15 @@ def find_box_corners_by_hough(img_bgr):
     tr = line_intersection(T, R)
     br = line_intersection(B, R)
     bl = line_intersection(B, L)
-
+    # padding the corners, to get a bit outside the arena aswell
+    tr[0] += 100
+    tr[1] += -100
+    tl[0] += -100
+    tl[1] += -100
+    br[0] += 100
+    br[1] += 100
+    bl[0] += -100
+    bl[1] += 100
     if any(p is None for p in [tl, tr, br, bl]):
         return None, red, edges
 
@@ -132,7 +140,24 @@ def touches_border(contour, img_w, img_h, margin=5):
 
 
 def find_red_cross_contour(img_bgr):
-    hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
+    img_h, img_w = img_bgr.shape[:2]
+
+    # Middle search area size
+    roi_w = 400
+    roi_h = 300
+
+    # Calculate centered ROI
+    x0 = max(0, img_w // 2 - roi_w // 2)
+    y0 = max(0, img_h // 2 - roi_h // 2)
+    x1 = min(img_w, x0 + roi_w)
+    y1 = min(img_h, y0 + roi_h)
+
+    # Crop image to only middle area
+    roi_bgr = img_bgr[y0:y1, x0:x1]
+    #debug = roi_bgr.copy()
+    #cv2.imwrite("debug_middle_roi.png", debug)
+
+    hsv = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2HSV)
     red_mask = hsv_mask_red(hsv)
 
     kernel = np.ones((5, 5), np.uint8)
@@ -176,7 +201,17 @@ def find_red_cross_contour(img_bgr):
         return None, red_mask
 
     cross_contour = max(contours, key=cv2.contourArea)
-    return cross_contour, cross_mask
+    cross_contour = cross_contour + np.array([[[x0, y0]]], dtype=np.int32)
+
+
+    full_mask = np.zeros((img_h, img_w), dtype=np.uint8)
+    full_mask[y0:y1, x0:x1] = cross_mask
+
+    debug_mask = full_mask.copy()
+    cv2.imwrite("debug_mask.png", debug_mask)
+
+
+    return cross_contour, full_mask
 
 def find_red_cross_boxes(img_bgr):
     cross_contour, cross_mask = find_red_cross_contour(img_bgr)
@@ -185,54 +220,162 @@ def find_red_cross_boxes(img_bgr):
         return None
 
     x, y, w, h = cv2.boundingRect(cross_contour)
-    roi = cross_mask[y:y+h, x:x+w]
+    roi = cross_mask[y:y + h, x:x + w]
 
     ys, xs = np.where(roi > 0)
     if len(xs) == 0:
         return None
 
-    cx = int(np.mean(xs))
-    cy = int(np.mean(ys))
+    cx = float(np.mean(xs))
+    cy = float(np.mean(ys))
 
-    band = max(10, min(w, h) // 5)
+    # Find line segments in the red cross
+    lines = cv2.HoughLinesP(
+        roi,
+        rho=1,
+        theta=np.pi / 180,
+        threshold=15,
+        minLineLength=max(10, min(w, h) // 4),
+        maxLineGap=20
+    )
 
-    vertical_mask = np.zeros_like(roi)
-    horizontal_mask = np.zeros_like(roi)
-
-    x1 = max(0, cx - band)
-    x2 = min(roi.shape[1], cx + band)
-    y1 = max(0, cy - band)
-    y2 = min(roi.shape[0], cy + band)
-
-    vertical_mask[:, x1:x2] = roi[:, x1:x2]
-    horizontal_mask[y1:y2, :] = roi[y1:y2, :]
-
-    v_contours, _ = cv2.findContours(vertical_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    h_contours, _ = cv2.findContours(horizontal_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    if not v_contours or not h_contours:
+    if lines is None or len(lines) < 2:
         return None
 
-    v_contour = max(v_contours, key=cv2.contourArea)
-    h_contour = max(h_contours, key=cv2.contourArea)
+    angles = []
 
-    v_contour = v_contour + np.array([[[x, y]]], dtype=np.int32)
-    h_contour = h_contour + np.array([[[x, y]]], dtype=np.int32)
+    for line in lines:
+        x1, y1, x2, y2 = line[0]
 
-    v_rect = cv2.minAreaRect(v_contour)
-    h_rect = cv2.minAreaRect(h_contour)
+        dx = x2 - x1
+        dy = y2 - y1
 
-    v_box = cv2.boxPoints(v_rect).astype(int)
-    h_box = cv2.boxPoints(h_rect).astype(int)
+        if dx == 0 and dy == 0:
+            continue
+
+        angle = np.degrees(np.arctan2(dy, dx))
+
+        if angle < 0:
+            angle += 180
+
+        angles.append(angle)
+
+    if len(angles) < 2:
+        return None
+
+    angles = np.array(angles, dtype=np.float32)
+
+    # Cluster angles into two dominant directions
+    angle_features = np.column_stack([
+        np.cos(np.deg2rad(2 * angles)),
+        np.sin(np.deg2rad(2 * angles))
+    ]).astype(np.float32)
+
+    criteria = (
+        cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER,
+        20,
+        0.1
+    )
+
+    _, labels, _ = cv2.kmeans(
+        angle_features,
+        2,
+        None,
+        criteria,
+        10,
+        cv2.KMEANS_PP_CENTERS
+    )
+
+    labels = labels.flatten()
+
+    direction_angles = []
+
+    for cluster_id in [0, 1]:
+        cluster_angles = angles[labels == cluster_id]
+
+        if len(cluster_angles) == 0:
+            continue
+
+        mean_cos = np.mean(np.cos(np.deg2rad(2 * cluster_angles)))
+        mean_sin = np.mean(np.sin(np.deg2rad(2 * cluster_angles)))
+
+        mean_angle = 0.5 * np.degrees(np.arctan2(mean_sin, mean_cos))
+
+        if mean_angle < 0:
+            mean_angle += 180
+
+        direction_angles.append(mean_angle)
+
+    if len(direction_angles) < 2:
+        return None
+
+    boxes = []
+
+    # This is the important change:
+    # The two arm masks are NOT exclusive.
+    # The center pixels may belong to both arms.
+    half_thickness = max(8, min(w, h) // 7)
+
+    for angle in direction_angles:
+        angle_rad = np.deg2rad(angle)
+
+        direction = np.array([
+            np.cos(angle_rad),
+            np.sin(angle_rad)
+        ])
+
+        arm_mask = np.zeros_like(roi)
+
+        for px, py in zip(xs, ys):
+            p = np.array([
+                px - cx,
+                py - cy
+            ])
+
+            # Perpendicular distance from pixel to the detected arm direction
+            dist = abs(p[0] * direction[1] - p[1] * direction[0])
+
+            if dist <= half_thickness:
+                arm_mask[py, px] = 255
+
+        # Close small gaps in the arm
+        kernel = np.ones((5, 5), np.uint8)
+        arm_mask = cv2.morphologyEx(arm_mask, cv2.MORPH_CLOSE, kernel, iterations=1)
+
+        contours, _ = cv2.findContours(
+            arm_mask,
+            cv2.RETR_EXTERNAL,
+            cv2.CHAIN_APPROX_SIMPLE
+        )
+
+        if not contours:
+            return None
+
+        arm_contour = max(contours, key=cv2.contourArea)
+
+        if cv2.contourArea(arm_contour) < 100:
+            return None
+
+        # Move back to original image coordinates
+        arm_contour = arm_contour + np.array([[[x, y]]], dtype=np.int32)
+
+        rect = cv2.minAreaRect(arm_contour)
+        box = cv2.boxPoints(rect).astype(int)
+
+        boxes.append(box)
 
     M = cv2.moments(cross_contour)
     center = None
+
     if M["m00"] != 0:
-        center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+        center = (
+            int(M["m10"] / M["m00"]),
+            int(M["m01"] / M["m00"])
+        )
 
     return {
-        "vertical_box": v_box,
-        "horizontal_box": h_box,
+        "vertical_box": boxes[0],
+        "horizontal_box": boxes[1],
         "center": center,
     }
     
@@ -352,6 +495,7 @@ def find_arena(img, out_w, out_h):
     corners = find_box_corners_by_hough(img)
     if corners is None:
         return None, None
+
     M = cv2.getPerspectiveTransform(corners.astype(np.float32), dst)
     warped = cv2.warpPerspective(img, M, (out_w, out_h))
     return warped
