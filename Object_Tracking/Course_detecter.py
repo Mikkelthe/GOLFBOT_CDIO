@@ -376,7 +376,7 @@ def find_red_cross_boxes(img_bgr):
             int(M["m10"] / M["m00"]),
             int(M["m01"] / M["m00"])
         )
-
+    print("i am center " + str(center))
     return {
         "vertical_box": boxes[0],
         "horizontal_box": boxes[1],

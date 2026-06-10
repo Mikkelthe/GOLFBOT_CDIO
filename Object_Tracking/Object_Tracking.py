@@ -30,7 +30,9 @@ def detect_balls_by_hsv(warped_bgr, lower, upper, min_area=100, max_area=800, mi
             continue
 
         (x, y), r = cv2.minEnclosingCircle(c)
-        realx, realy = px_to_world_cm(x, y, warp_w_px=warped_bgr.shape[1], warp_h_px=warped_bgr.shape[0])
+        width = warped_bgr.shape[1]
+        height = warped_bgr.shape[0]
+        realx, realy = px_to_world_cm(x, y, warp_w_px=width, warp_h_px=height)
         detections.append((float(realx), float(realy), int(x), int(y), int(r), float(area), float(circularity)))
 
     # Optional: sort biggest first (often helps stability)
@@ -45,8 +47,8 @@ def px_to_world_cm(
     warp_w_px,
     warp_h_px,
     border_px=100,
-    court_w_cm=125.0,
-    court_h_cm=170.0
+    court_w_cm=170.0,
+    court_h_cm=125.0
 ):
     court_w_px = warp_w_px - 2 * border_px
     court_h_px = warp_h_px - 2 * border_px
@@ -70,11 +72,11 @@ def px_to_world_cm(
 def world_cm_to_px(
     x_cm,
     y_cm,
-    img_w_px=800,
-    img_h_px=1200,
+    img_w_px,
+    img_h_px,
     border_px=100,
-    court_w_cm=125.0,
-    court_h_cm=170.0
+    court_w_cm=170.0,
+    court_h_cm=125.0
 ):
     court_w_px = img_w_px - 2 * border_px
     court_h_px = img_h_px - 2 * border_px
@@ -99,8 +101,8 @@ def cm_to_px(
     warp_w_px=800,
     warp_h_px=1200,
     border_px=100,
-    court_w_cm=125.0,
-    court_h_cm=170.0
+    court_w_cm=170.0,
+    court_h_cm=125.0
 ):
     court_w_px = warp_w_px - 2 * border_px
     cm_per_px_x = court_w_cm / court_w_px
