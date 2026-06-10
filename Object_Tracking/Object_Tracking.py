@@ -96,11 +96,11 @@ def world_cm_to_px(
 #Requires court to be uniform to work correctly
 def cm_to_px(
     radius_cm,
-    warp_w_px=800,
-    warp_h_px=1200,
+    warp_w_px=1500,
+    warp_h_px=1000,
     border_px=100,
-    court_w_cm=125.0,
-    court_h_cm=170.0
+    court_w_cm=170.0,
+    court_h_cm=125.0
 ):
     court_w_px = warp_w_px - 2 * border_px
     cm_per_px_x = court_w_cm / court_w_px
