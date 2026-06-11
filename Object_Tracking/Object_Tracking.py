@@ -188,15 +188,15 @@ def find_objects_in_image(img_bgr,w,h):
     if warped is None:
         return None, None
 
-    dilated = cv2.dilate(warped, np.ones((3,3), np.uint8), iterations=1)
-    blurred = cv2.medianBlur(dilated, 5)
+    dilated = cv2.dilate(warped, np.ones((1,1), np.uint8), iterations=1)
+    blurred = cv2.medianBlur(dilated, 1)
     kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
     sharpened = cv2.filter2D(blurred, -1, kernel)
 
-    orange_balls, omask = detect_balls_by_hsv(sharpened, lower=(0, 5, 120), upper=(40, 255, 255), lower2=(0, 0, 0), upper2=(180, 30, 50))
-    dark_orange_balls, domask = detect_balls_by_hsv(sharpened, lower=(5, 120, 120), upper=(30, 255, 255), lower2=(0, 0, 0), upper2=(180, 30, 50))
-    white_balls, wmask = detect_balls_by_hsv(sharpened, lower=(0, 0, 180), upper=(180, 90, 255), lower2=(0, 0, 0), upper2=(180, 30, 50))
-    shadowywhite_balls, sw = detect_balls_by_hsv(sharpened, lower=(0, 0, 140), upper=(180, 90, 250), lower2=(0, 0, 0), upper2=(180, 30, 75))
+    orange_balls, omask = detect_balls_by_hsv(warped, lower=(0, 5, 120), upper=(40, 255, 255), lower2=(0, 0, 0), upper2=(180, 100, 80))
+    dark_orange_balls, domask = detect_balls_by_hsv(warped, lower=(5, 120, 120), upper=(30, 255, 255), lower2=(0, 0, 0), upper2=(180, 100, 80))
+    white_balls, wmask = detect_balls_by_hsv(warped, lower=(0, 0, 180), upper=(180, 90, 255), lower2=(0, 0, 0), upper2=(180, 100, 80))
+    shadowywhite_balls, sw = detect_balls_by_hsv(blurred, lower=(0, 0, 130), upper=(180, 100, 250), lower2=(0, 0, 0), upper2=(180, 100, 80))
     
     cross_position = find_red_cross_boxes(warped)
 

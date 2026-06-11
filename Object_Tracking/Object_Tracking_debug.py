@@ -29,16 +29,10 @@ if __name__ == "__main__":
     COURT_W_CM, COURT_H_CM = 170.0, 125.0
 
     if i < imagecount:
-        videodevice = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+        videodevice = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         videodevice.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
         videodevice.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
         time.sleep(2)
-        j = 0
-        while j < 5:
-            j += 1
-            print(f"image warm up {j}")
-            time.sleep(1)
-            videodevice.read()
     start_time = time.time()
     while i < imagecount:
         i += 1
