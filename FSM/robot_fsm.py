@@ -1,62 +1,98 @@
 from .state import *
+from Object_Tracking.Object_Tracking import find_objects_in_image
 
 # States
-def initialStateHandler(golfBot: GolfBot):
+def detectStateHandler(golfBot: GolfBot):
     return None
 
-def retrieveBallFromCornerStateHandler(golfBot: GolfBot):
+def collectOrangeStateHandler(golfBot: GolfBot):
     return None
 
-def approachCornerStateHandler(golfBot: GolfBot):
+def approachOrangeInCornerStateHandler(golfBot: GolfBot):
     return None
 
-def approachClosestBallStateHandler(golfBot: GolfBot):
+def checkQuadrantStateHandler(golfBot: GolfBot):
     return None
 
-def avoidObstacleStateHandler(golfBot: GolfBot):
+def findNearestStateHandler(golfBot: GolfBot):
+    return None
+
+def approachCoordinateInCornerStateHandler(golfBot: GolfBot):
+    return None
+
+def readjustStateHandler(golfBot: GolfBot):
+    return None
+
+def approachWhiteCoordinateStateHandler(golfBot: GolfBot):
+    return None
+
+def approachNewQuadrantStateHandler(golfBot: GolfBot):
     return None
 
 def approachNarrowGoalStateHandler(golfBot: GolfBot):
     return None
 
-def approachWideGoalStateHandler(golfBot: GolfBot):
+def avoidObstacleStateHandler(golfBot: GolfBot):
     return None
 
 def submitBallsStateHandler(golfBot: GolfBot):
     return None
 
 # Transitions
-def ballFoundTransitionHandler(golfBot: GolfBot):
+def orangeDetectedTransitionHandler(golfBot: GolfBot):
     return False
 
-def lastBallInCornerTransitionHandler(golfBot: GolfBot):
+def orangeInCornerTransitionHandler(golfBot: GolfBot):
     return False
 
-def obstacleInPathTransitionHandler(golfBot: GolfBot):
+def orangeCollectedTransitionHandler(golfBot: GolfBot):
     return False
 
+def whiteDetectedTransitionHandler(golfBot: GolfBot):
+    return False
+
+def whiteInCornerTransitionHandler(golfBot: GolfBot):
+    return False
+
+def OrangeCollectedTransitionHandler(golfBot: GolfBot):
+    return False
+
+def doneReadjustingTransitionHandler(golfBot: GolfBot):
+    return False
+
+def OrangeCollectedTransitionHandler(golfBot: GolfBot):
+    return False
 
 def createRobotFSM():
-    initialState = State()
-    initialState.setHandler(initialStateHandler)
+    detectState = State()
+    detectState.setHandler(detectStateHandler)
 
-    retrieveBallFromCornerState = State()
-    retrieveBallFromCornerState.setHandler(retrieveBallFromCornerStateHandler)
+    collectOrangeState = State()
+    collectOrangeState.setHandler(collectOrangeStateHandler)
 
-    approachCornerState = State()
-    approachCornerState.setHandler(approachCornerStateHandler)
+    checkQuadrantState = State()
+    checkQuadrantState.setHandler(checkQuadrantStateHandler)
 
-    approachClosestBallState = State()
-    approachClosestBallState.setHandler(approachClosestBallStateHandler)
+    findNearestState = State()
+    findNearestState.setHandler(findNearestStateHandler)
 
-    avoidObstacleState = State()
-    avoidObstacleState.setHandler(avoidObstacleStateHandler)
+    approachCoordinateInCornerState = State()
+    approachCoordinateInCornerState.setHandler(approachCoordinateInCornerStateHandler)
+
+    readjustState = State()
+    readjustState.setHandler(readjustStateHandler)
+
+    approachWhiteCoordinateState = State()
+    approachWhiteCoordinateState.setHandler(approachWhiteCoordinateStateHandler)
+
+    approachNewQuadrantState = State()
+    approachNewQuadrantState.setHandler(approachNewQuadrantStateHandler)
 
     approachNarrowGoalState = State()
     approachNarrowGoalState.setHandler(approachNarrowGoalStateHandler)
 
-    approachWideGoalState = State()
-    approachWideGoalState.setHandler(approachWideGoalStateHandler)
+    avoidObstacleGoalState = State()
+    avoidObstacleGoalState.setHandler(avoidObstacleStateHandler)
 
     submitBallsState = State()
     submitBallsState.setHandler(submitBallsStateHandler)
