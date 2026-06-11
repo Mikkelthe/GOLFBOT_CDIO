@@ -38,7 +38,7 @@ if __name__ == "__main__":
         i += 1
         if i%5 == 0:
             print("move")
-            time.sleep(1)
+            time.sleep(10)
         ret, img = videodevice.read()
         videocapturedimagepath = f"Images/captured_image_{i}.jpg"
 
