@@ -19,6 +19,7 @@ def detect_balls_by_hsv(warped_bgr, lower, upper, lower2=None, upper2=None, min_
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     detections = []
+    ballcenter = []
     for c in contours:
         area = cv2.contourArea(c)
         if area < min_area or area > max_area:
@@ -40,11 +41,12 @@ def detect_balls_by_hsv(warped_bgr, lower, upper, lower2=None, upper2=None, min_
             continue
         realx, realy = px_to_world_cm(x, y, warp_w_px=width, warp_h_px=height)
         detections.append((float(realx), float(realy), int(x), int(y), int(r), float(area), float(circularity)))
+        ballcenter.append((float(realx), float(realy)))
 
     # Optional: sort biggest first (often helps stability)
     detections.sort(key=lambda t: t[5], reverse=True)
 
-    return detections, mask
+    return detections, mask, ballcenter
 
 #Coordinates
 def px_to_world_cm(
@@ -193,10 +195,10 @@ def find_objects_in_image(img_bgr,w,h):
     kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
     sharpened = cv2.filter2D(blurred, -1, kernel)
 
-    orange_balls, omask = detect_balls_by_hsv(warped, lower=(0, 5, 120), upper=(40, 255, 255), lower2=(0, 0, 0), upper2=(180, 100, 80))
-    dark_orange_balls, domask = detect_balls_by_hsv(warped, lower=(5, 120, 120), upper=(30, 255, 255), lower2=(0, 0, 0), upper2=(180, 100, 80))
-    white_balls, wmask = detect_balls_by_hsv(warped, lower=(0, 0, 180), upper=(180, 90, 255), lower2=(0, 0, 0), upper2=(180, 100, 80))
-    shadowywhite_balls, sw = detect_balls_by_hsv(blurred, lower=(0, 0, 130), upper=(180, 100, 250), lower2=(0, 0, 0), upper2=(180, 100, 80))
+    orange_balls, omask, ocenter = detect_balls_by_hsv(warped, lower=(0, 5, 120), upper=(40, 255, 255), lower2=(0, 0, 0), upper2=(180, 100, 70))
+    dark_orange_balls, domask, docenter = detect_balls_by_hsv(warped, lower=(5, 120, 120), upper=(30, 255, 255), lower2=(0, 0, 0), upper2=(180, 100, 70))
+    white_balls, wmask, wcenter = detect_balls_by_hsv(warped, lower=(0, 0, 180), upper=(180, 110, 255), lower2=(0, 0, 0), upper2=(180, 100, 70))
+    shadowywhite_balls, sw, swcenter = detect_balls_by_hsv(blurred, lower=(0, 0, 130), upper=(180, 100, 250), lower2=(0, 0, 0), upper2=(180, 100, 70))
     
     cross_position = find_red_cross_boxes(warped)
 
@@ -206,4 +208,15 @@ def find_objects_in_image(img_bgr,w,h):
         print(len(cross_position))
         print(cross_position)
 
-    return orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, omask, domask, wmask, sw
+    return orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, omask, domask, wmask, sw, ocenter, docenter, wcenter, swcenter
+
+def filter_valid_objects(img_bgr, w, h):
+    orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, omask, domask, wmask, sw, ocenter, docenter, wcenter, swcenter = find_objects_in_image(
+        img_bgr, w,h)
+    valid_objects = wcenter.copy()
+    valid_objects.append(swcenter)
+    valid_vip_objects = [ocenter, docenter]
+    # valid_objects = valid_objects.append(shadowywhite_balls)
+    print(f"i found {valid_objects}. That's {len(valid_objects)} balls")
+    valid_vip_objects = []
+    return valid_objects, valid_vip_objects

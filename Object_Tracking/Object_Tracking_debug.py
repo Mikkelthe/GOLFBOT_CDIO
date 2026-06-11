@@ -4,7 +4,7 @@ from time import sleep
 from .Object_Tracking import (
     detect_balls_by_hsv,
     draw_detections_on_warp,
-    draw_cross_on_warp, find_objects_in_image
+    draw_cross_on_warp, find_objects_in_image, filter_valid_objects
 )
 from .Course_detecter import (
     find_arena,
@@ -17,7 +17,7 @@ from pathlib import Path
 
 
 if __name__ == "__main__":
-    start_i = 0
+    start_i = 22
     i = start_i
     base_path = Path(__file__).resolve().parent
     output_folder = base_path.parent / "Warped_Images"
@@ -73,7 +73,8 @@ if __name__ == "__main__":
         if warped is None:
             raise RuntimeError("Could not find arena")
 
-        orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, omask, domask, wmask, sw = find_objects_in_image(img, WARP_W, WARP_H)
+        orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, omask, domask, wmask, sw, a, b, c, d = find_objects_in_image(img, WARP_W, WARP_H)
+        valid_objects, valid_vip_objects = filter_valid_objects(img, WARP_W, WARP_H)
 
         # orange_balls, omask = detect_balls_by_hsv(warped, lower=(0, 40, 140), upper=(40, 255, 255))
         # dark_orange_balls, domask = detect_balls_by_hsv(warped, lower=(5, 120, 120), upper=(30, 255, 255))
