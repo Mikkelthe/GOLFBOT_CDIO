@@ -64,6 +64,7 @@ class GolfBotMemory:
         self.forwardDirection = [0, 1] # Direction
         self.arena = find_arena(img,1500,1000)
         self.cross = 0
+        self.goingToCornerLine = False
 
 
 class State:

@@ -47,6 +47,9 @@ def find_distance_between_points(point1: Point, point2: Point):
     return np.sqrt(np.square(point2.x - point1.x) + np.square(point2.y - point1.y))
 
 #find the best turn from current heading to a point
+def drive_to_point(point:Point):
+    commands = []
+    return commands
 def find_turn(current_heading, point1, point2):
     direction_radian = np.atan2(point2.y - point1.y, point2.x - point1.x)
     target_direction = round(math.degrees(direction_radian))

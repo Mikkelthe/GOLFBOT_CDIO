@@ -1,6 +1,8 @@
+from fontTools.ufoLib import deprecatedFontInfoAttributesVersion2
+
 from .state import *
 from Object_Tracking.Object_Tracking import find_objects_in_image, px_to_world_cm, find_arena, cm_to_px
-from Navigation.Navigation import find_bot, find_optimal_corner_approach
+from Navigation.Navigation import find_bot, find_optimal_corner_approach, drive_to_point
 from Navigation.point import Point
 from settings.courtSettings import court_settings
 # States
@@ -24,6 +26,8 @@ def checkQuadrantStateHandler(golfBot: GolfBotMemory):
     return None
 
 def findNearestStateHandler(golfBot: GolfBotMemory):
+    #ToDo closest ball function
+
     return None
 
 #Should be used for both the orange and whiteball in state corner. Takes currentball and goes to it using corner strategy
@@ -34,12 +38,19 @@ def approachCoordinateInCornerStateHandler(golfBot: GolfBotMemory):
     ballPoint = Point(x, y)
     a, b, c, = find_bot(golfBot.arena)
     cornerApproachPoint = find_optimal_corner_approach(a, ballPoint)
+
     # ToDo: go to corner approach point
-
-    # ToDo: Turn to heading for ball
-
+    if a == cornerApproachPoint:
+        golfBot.goingToCornerLine = False
+    if golfBot.goingToCornerLine:
+        commands = drive_to_point(cornerApproachPoint)
+        sendCommmands(commands)
+    else:
+    #consider splitting states to one to get to the corner, then get the ball. How do i split this?
     # ToDo: go to ball
-    currentBall = golfBot.currentBall
+
+        commands = drive_to_point(golfBot.currentBall)
+        sendCommands(commands)
     return None
 
 def readjustStateHandler(golfBot: GolfBotMemory):
@@ -93,6 +104,7 @@ def orangeDetectedTransitionHandler(golfBot: GolfBotMemory):
 
 def orangeInCornerTransitionHandler(golfBot: GolfBotMemory):
     if golfBot.orangeBalls[1] == golfBot.currentBall:
+        golfBot.goingToCornerLine = True
         return IsInCorner(golfBot.currentBall[0], golfBot.currentBall[1])
     return False
 
@@ -108,6 +120,7 @@ def whiteDetectedTransitionHandler(golfBot: GolfBotMemory):
 
 def whiteInCornerTransitionHandler(golfBot: GolfBotMemory):
     if golfBot.currentBall in golfBot.whiteBalls:
+        golfBot.goingToCornerLine = True
         return IsInCorner(golfBot.currentBall[0], golfBot.currentBall[1])
     return False
 
