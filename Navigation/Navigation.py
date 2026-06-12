@@ -90,6 +90,8 @@ def find_bot(image):
         angle = np.degrees(
             np.arctan2(heading[1], heading[0])
         )
+    else:
+        return None, None
     return center, angle
 
 
@@ -99,7 +101,7 @@ images_folder = base_path.parent / "Images"
 image_files = list(images_folder.glob("*.jpg"))
 
 #load image
-img = cv2.imread("arena.jpg")
+img = cv2.imread("arena3.jpg")
 
 #picture dimensions center in pixel
 WARP_W, WARP_H = 1500, 1000
@@ -133,8 +135,8 @@ white_y = white_ball[0][1]
 ballCoordinates = world_cm_to_px(white_x, white_y, WARP_W, WARP_H)
 
 # Calculate parallax distortion for bot
-cam_height_cm = 195.0
-bot_height_cm = 46.0
+cam_height_cm = 174.0
+bot_height_cm = 44.5
 
 # scale factor to convert marker-plane radius -> ground-plane radius
 scale = (cam_height_cm - bot_height_cm) / cam_height_cm  # = 1 / ratio_height
