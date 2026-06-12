@@ -1,10 +1,12 @@
 import cv2
 import numpy as np
 from pathlib import Path
+
+from settings.courtSettings import court_settings
 from .Course_detecter import find_arena
 from .Course_detecter import find_red_cross_center
 from .Course_detecter import find_red_cross_boxes
-
+from settings import courtSettings
 
 def detect_balls_by_hsv(warped_bgr, lower, upper, lower2=None, upper2=None, min_area=125, max_area=800, min_circularity=0.75):
     hsv = cv2.cvtColor(warped_bgr, cv2.COLOR_BGR2HSV)
@@ -50,11 +52,11 @@ def detect_balls_by_hsv(warped_bgr, lower, upper, lower2=None, upper2=None, min_
 def px_to_world_cm(
     x_px,
     y_px,
-    warp_w_px,
-    warp_h_px,
+    warp_w_px=court_settings.image_width,
+    warp_h_px=court_settings.image_height,
     border_px=100,
-    court_w_cm=170.0,
-    court_h_cm=125.0
+    court_w_cm=court_settings.court_width,
+    court_h_cm=court_settings.court_height
 ):
     court_w_px = warp_w_px - 2 * border_px
     court_h_px = warp_h_px - 2 * border_px
@@ -78,11 +80,11 @@ def px_to_world_cm(
 def world_cm_to_px(
     x_cm,
     y_cm,
-    img_w_px,
-    img_h_px,
+    img_w_px=court_settings.image_width,
+    img_h_px=court_settings.image_height,
     border_px=100,
-    court_w_cm=170.0,
-    court_h_cm=125.0
+    court_w_cm=court_settings.court_width,
+    court_h_cm=court_settings.court_height
 ):
     court_w_px = img_w_px - 2 * border_px
     court_h_px = img_h_px - 2 * border_px
@@ -104,11 +106,11 @@ def world_cm_to_px(
 #Requires court to be uniform to work correctly
 def cm_to_px(
     radius_cm,
-    warp_w_px=1500,
-    warp_h_px=1000,
+    warp_w_px=court_settings.image_width,
+    warp_h_px=court_settings.image_height,
     border_px=100,
-    court_w_cm=170.0,
-    court_h_cm=125.0
+    court_w_cm=court_settings.court_width,
+    court_h_cm=court_settings.court_height
 ):
     court_w_px = warp_w_px - 2 * border_px
     cm_per_px_x = court_w_cm / court_w_px
@@ -143,11 +145,11 @@ def draw_detections_on_warp(
 def draw_cross_on_warp(
     img,
     cross_data,
-    warp_w_px,
-    warp_h_px,
-    court_w_cm=125.0,
-    court_h_cm=170.0,
-    border_px=50
+    warp_w_px=court_settings.image_width,
+    warp_h_px=court_settings.image_height,
+    court_w_cm=court_settings.court_width,
+    court_h_cm=court_settings.court_height,
+    border_px=100
 ):
     if cross_data is None:
         return img
