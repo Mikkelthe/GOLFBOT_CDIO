@@ -4,7 +4,7 @@ from time import sleep
 from .Object_Tracking import (
     detect_balls_by_hsv,
     draw_detections_on_warp,
-    draw_cross_on_warp
+    draw_cross_on_warp, find_objects_in_image
 )
 from .Course_detecter import (
     find_arena,
@@ -29,22 +29,16 @@ if __name__ == "__main__":
     COURT_W_CM, COURT_H_CM = 170.0, 125.0
 
     if i < imagecount:
-        videodevice = cv2.VideoCapture(1)
+        videodevice = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         videodevice.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
         videodevice.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
         time.sleep(2)
-        j = 0
-        while j < 5:
-            j += 1
-            print(f"image warm up {j}")
-            time.sleep(1)
-            videodevice.read()
     start_time = time.time()
     while i < imagecount:
         i += 1
         if i%5 == 0:
             print("move")
-            time.sleep(1)
+            time.sleep(10)
         ret, img = videodevice.read()
         videocapturedimagepath = f"Images/captured_image_{i}.jpg"
 
@@ -79,10 +73,13 @@ if __name__ == "__main__":
         if warped is None:
             raise RuntimeError("Could not find arena")
 
-        orange_balls, omask = detect_balls_by_hsv(warped, lower=(0, 40, 140), upper=(40, 255, 255))
-        dark_orange_balls, domask = detect_balls_by_hsv(warped, lower=(5, 120, 120), upper=(30, 255, 255))
-        white_balls, wmask = detect_balls_by_hsv(warped, lower=(0, 0, 180), upper=(180, 90, 255))
-        shadowywhite_balls, sw = detect_balls_by_hsv(warped, lower=(0, 0, 30), upper=(180, 20, 240))
+        orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, omask, domask, wmask, sw = find_objects_in_image(img, WARP_W, WARP_H)
+
+        # orange_balls, omask = detect_balls_by_hsv(warped, lower=(0, 40, 140), upper=(40, 255, 255))
+        # dark_orange_balls, domask = detect_balls_by_hsv(warped, lower=(5, 120, 120), upper=(30, 255, 255))
+        # white_balls, wmask = detect_balls_by_hsv(warped, lower=(0, 0, 180), upper=(180, 90, 255))
+        # shadowywhite_balls, sw = detect_balls_by_hsv(warped, lower=(0, 0, 30), upper=(180, 20, 240))
+
 
         mask_folder = base_path.parent / "masks_Images"
         mask_folder.mkdir(exist_ok=True)

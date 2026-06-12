@@ -5,7 +5,7 @@ from matplotlib.image import imsave
 
 def hsv_mask_red(hsv):
     # red wraps hue -> two ranges
-    lower1 = np.array([0, 40, 30])
+    lower1 = np.array([0, 20, 30])
     upper1 = np.array([30, 255, 255])
     lower2 = np.array([150, 40, 30])
     upper2 = np.array([180, 255, 255])

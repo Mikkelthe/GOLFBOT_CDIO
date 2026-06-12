@@ -8,7 +8,7 @@ run = True
 WARP_W, WARP_H = 1500, 1000
 COURT_W_CM, COURT_H_CM = 170.0, 125.0
 
-videodevice = cv2.VideoCapture(1)
+videodevice = cv2.VideoCapture(0,cv2.CAP_DSHOW)
 videodevice.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
 videodevice.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
@@ -27,8 +27,12 @@ while run:
 
 
     vis = frame.copy()
+    vis = find_arena(vis, WARP_W, WARP_H)
 
-    orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position = find_objects_in_image(frame, WARP_W, WARP_H)
+    dilated = cv2.dilate(vis, np.ones((3,3), np.uint8), iterations=1)
+    blurred = cv2.medianBlur(dilated, 5)
+
+    orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, a, b, c, d = find_objects_in_image(frame, WARP_W, WARP_H)
 
     draw_detections_on_warp(
         vis, orange_balls, "O",
@@ -61,6 +65,8 @@ while run:
     )
 
     cv2.imshow("vis", vis)
+
+    cv2.imshow("blurred", blurred)
 
     # Press q to quit
     if cv2.waitKey(1) & 0xFF == ord("q"):
