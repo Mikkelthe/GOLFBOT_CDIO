@@ -14,6 +14,7 @@ from .Course_detecter import (
 import cv2
 import numpy as np
 from pathlib import Path
+from settings.courtSettings import court_settings
 
 
 if __name__ == "__main__":
@@ -25,8 +26,8 @@ if __name__ == "__main__":
     imagecount = 20
         
     # ---- Court settings ----
-    WARP_W, WARP_H = 1500, 1000
-    COURT_W_CM, COURT_H_CM = 170.0, 125.0
+    WARP_W, WARP_H = court_settings.image_width, court_settings.image_height
+    COURT_W_CM, COURT_H_CM = court_settings.court_width, court_settings.court_height
 
     if i < imagecount:
         videodevice = cv2.VideoCapture(0, cv2.CAP_DSHOW)

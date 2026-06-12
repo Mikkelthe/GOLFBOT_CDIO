@@ -244,8 +244,6 @@ def accumulate_valid_objects(accumulated_objects,accumulated_vip_objects,rounded
     else:
         accumulated_objects[index%5] = rounded_objects
         accumulated_vip_objects[index%5] = rounded_vip_objects
-    print(f"{len(accumulated_objects)} objects accumulated")
-    print(f"{len(accumulated_vip_objects)} vip objects accumulated")
 
     # converting arrays to lists
     accumulated_objects_list = list()
