@@ -208,15 +208,63 @@ def find_objects_in_image(img_bgr,w,h):
         print(len(cross_position))
         print(cross_position)
 
-    return orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, omask, domask, wmask, sw, ocenter, docenter, wcenter, swcenter
+    return orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, omask, domask, wmask, sw, wcenter, ocenter, swcenter, docenter
 
-def filter_valid_objects(img_bgr, w, h):
-    orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, omask, domask, wmask, sw, ocenter, docenter, wcenter, swcenter = find_objects_in_image(
-        img_bgr, w,h)
+def group_valid_objects(wcenter, ocenter, swcenter, docenter):
     valid_objects = wcenter.copy()
-    valid_objects.append(swcenter)
-    valid_vip_objects = [ocenter, docenter]
-    # valid_objects = valid_objects.append(shadowywhite_balls)
-    print(f"i found {valid_objects}. That's {len(valid_objects)} balls")
-    valid_vip_objects = []
-    return valid_objects, valid_vip_objects
+    valid_objects += swcenter.copy()
+    rounded_objects = list()
+    for (coord_x, coord_y) in valid_objects:
+        rounded_objects.append((round(coord_x/4, 0)*4+2, round(coord_y/4, 0)*4+2))
+    for (coord_x, coord_y) in rounded_objects:
+        if rounded_objects.count((coord_x, coord_y)) > 1:
+            print(f"Removing {rounded_objects.count((coord_x,coord_y))-1} duplicate objects")
+            rounded_objects.remove((coord_x, coord_y))
+
+    valid_vip_objects = ocenter.copy()
+    valid_vip_objects += docenter.copy()
+    rounded_vip_objects = list()
+    for (coord_x, coord_y) in valid_vip_objects:
+        rounded_vip_objects.append((round(coord_x/4, 0)*4+2, round(coord_y/4, 0)*4+2))
+    for (coord_x, coord_y) in rounded_vip_objects:
+        if rounded_vip_objects.count((coord_x, coord_y)) > 1:
+            print(f"Removing {rounded_vip_objects.count((coord_x,coord_y))-1} duplicate vip objects")
+            rounded_vip_objects.remove((coord_x, coord_y))
+
+    print(f"i found {rounded_objects}. That's {len(rounded_objects)} balls")
+    print(f"i found {rounded_vip_objects}. That's {len(rounded_vip_objects)} super balls")
+    return rounded_objects, rounded_vip_objects
+
+def accumulate_valid_objects(accumulated_objects,accumulated_vip_objects,rounded_objects, rounded_vip_objects, index):
+    if index < 5:
+        accumulated_objects.append(rounded_objects)
+        accumulated_vip_objects.append(rounded_vip_objects)
+    else:
+        accumulated_objects[index%5] = rounded_objects
+        accumulated_vip_objects[index%5] = rounded_vip_objects
+    print(f"{len(accumulated_objects)} objects accumulated")
+    print(f"{len(accumulated_vip_objects)} vip objects accumulated")
+
+    # converting arrays to lists
+    accumulated_objects_list = list()
+    accumulated_vip_objects_list = list()
+    for obj in accumulated_objects:
+        accumulated_objects_list += obj
+    for obj in accumulated_vip_objects:
+        accumulated_vip_objects_list += obj
+
+    # filtering persistent objects
+    real_objects_list = list()
+    real_vip_objects_list = list()
+    for (coord_x,coord_y) in accumulated_objects_list:
+        if (coord_x, coord_y) not in real_objects_list and accumulated_objects_list.count((coord_x,coord_y)) > 2:
+            real_objects_list.append((coord_x, coord_y))
+
+    for (coord_x, coord_y) in accumulated_vip_objects_list:
+        if (coord_x, coord_y) not in real_vip_objects_list and accumulated_vip_objects_list.count((coord_x,coord_y)) > 2:
+            real_vip_objects_list.append((coord_x, coord_y))
+
+    print(f"{real_objects_list}")
+    print(f"{real_vip_objects_list}")
+
+    return real_objects_list, real_vip_objects_list

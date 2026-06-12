@@ -4,7 +4,7 @@ from time import sleep
 from .Object_Tracking import (
     detect_balls_by_hsv,
     draw_detections_on_warp,
-    draw_cross_on_warp, find_objects_in_image, filter_valid_objects
+    draw_cross_on_warp, find_objects_in_image, group_valid_objects, accumulate_valid_objects
 )
 from .Course_detecter import (
     find_arena,
@@ -61,6 +61,8 @@ if __name__ == "__main__":
 
     print(f"Found {len(image_files)} images")
 
+    accumulated_objects, accumulated_vip_objects = list(), list()
+    j=0
     for img_path in image_files:
         print(f"Processing {img_path.name}")
 
@@ -73,8 +75,10 @@ if __name__ == "__main__":
         if warped is None:
             raise RuntimeError("Could not find arena")
 
-        orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, omask, domask, wmask, sw, a, b, c, d = find_objects_in_image(img, WARP_W, WARP_H)
-        valid_objects, valid_vip_objects = filter_valid_objects(img, WARP_W, WARP_H)
+        orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, omask, domask, wmask, sw, wcenter, ocenter, swcenter, docenter = find_objects_in_image(img, WARP_W, WARP_H)
+        rounded_objects, rounded_vip_objects = group_valid_objects(wcenter, ocenter, swcenter, docenter)
+        accumulate_valid_objects(accumulated_objects,accumulated_vip_objects,rounded_objects, rounded_vip_objects, j)
+        j+=1
 
         # orange_balls, omask = detect_balls_by_hsv(warped, lower=(0, 40, 140), upper=(40, 255, 255))
         # dark_orange_balls, domask = detect_balls_by_hsv(warped, lower=(5, 120, 120), upper=(30, 255, 255))
