@@ -4,34 +4,37 @@ import io
 from dataclasses import dataclass
 from math import cos, radians, sin
 from pathlib import Path
+import sys
 
 import cv2
 
+if __package__ is None or __package__ == "":
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 from Object_Tracking.Course_detecter import find_arena
 from Object_Tracking.Object_Tracking import find_objects_in_image, px_to_world_cm, world_cm_to_px
+from robot_logic.navigation_config import GOAL_A_X_CM, GOAL_A_Y_CM, WARP_H, WARP_W
 from robot_logic.robot_detection.aruco_robot_detector import RobotPose, detect_robot_pose
-from robot_logic.route_planning.pathfinder import plan_path, straight_line_crosses_circle
+from robot_logic.route_planning.obstacles import CrossObstacle, build_cross_obstacle, straight_line_crosses_obstacle
+from robot_logic.route_planning.pathfinder import plan_path, smooth_path
 from robot_logic.route_planning.route_planner import (
-    CROSS_SAFETY_RADIUS_CM,
     FIELD_HEIGHT_CM,
     FIELD_WIDTH_CM,
     Ball,
     Goal,
     Point,
     choose_route,
-    distance,
+    route_quadrant_order,
 )
 
 
 IMAGE_DIR = Path("Images")
+DEFAULT_IMAGE_PATH = IMAGE_DIR / "captured_image_12.jpg"
 OUTPUT_PATH = Path("robot_logic/route_planning/planner_demo_output.jpg")
-WARP_W = 1200
-WARP_H = 800
 ROBOT_HEADING_ARROW_CM = 12
 
-# Goal A is assumed to be the right-side opening for this demo.
-# Confirm the exact side and coordinate with the team before final robot control.
-GOAL_A_POSITION = Point(FIELD_WIDTH_CM - 3.0, FIELD_HEIGHT_CM / 2.0)
+# Goal A is fixed at the middle of the outermost right wall.
+GOAL_A_POSITION = Point(GOAL_A_X_CM, GOAL_A_Y_CM)
 
 
 @dataclass
@@ -45,9 +48,9 @@ class ImageAnalysis:
     white_balls: list
     cross_position: object | None
     cross_point: Point | None
+    cross_obstacle: CrossObstacle | None
     robot_pose: RobotPose | None
     balls: list[Ball]
-    skipped_cross_zone_balls: int
     blocked_direct_segments: int
     score: int
     notes: list[str]
@@ -55,7 +58,7 @@ class ImageAnalysis:
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("image_path", nargs="?")
+    parser.add_argument("image_path", nargs="?", default=str(DEFAULT_IMAGE_PATH))
     return parser.parse_args()
 
 
@@ -72,41 +75,6 @@ def detection_to_point(detection) -> Point:
     return Point(detection[0], detection[1])
 
 
-def detection_pixel_center(detection) -> tuple[int, int] | None:
-    if len(detection) < 4:
-        return None
-
-    return int(detection[2]), int(detection[3])
-
-
-def deduplicate_detections(detections: list, min_pixel_distance: int = 10) -> list:
-    kept = []
-
-    for detection in detections:
-        center = detection_pixel_center(detection)
-
-        if center is None:
-            kept.append(detection)
-            continue
-
-        already_seen = False
-        for existing in kept:
-            existing_center = detection_pixel_center(existing)
-            if existing_center is None:
-                continue
-
-            dx = center[0] - existing_center[0]
-            dy = center[1] - existing_center[1]
-            if dx * dx + dy * dy <= min_pixel_distance * min_pixel_distance:
-                already_seen = True
-                break
-
-        if not already_seen:
-            kept.append(detection)
-
-    return kept
-
-
 def unpack_detections(detection_result) -> tuple[list, list, object | None]:
     if detection_result is None:
         return [], [], None
@@ -117,6 +85,12 @@ def unpack_detections(detection_result) -> tuple[list, list, object | None]:
 
     if len(detection_result) == 5:
         orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position = detection_result
+        orange_candidates = (orange_balls or []) + (dark_orange_balls or [])
+        white_candidates = (white_balls or []) + (shadowywhite_balls or [])
+        return orange_candidates, white_candidates, cross_position
+
+    if len(detection_result) >= 9:
+        orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position = detection_result[:5]
         orange_candidates = (orange_balls or []) + (dark_orange_balls or [])
         white_candidates = (white_balls or []) + (shadowywhite_balls or [])
         return orange_candidates, white_candidates, cross_position
@@ -154,34 +128,6 @@ def build_balls(orange_balls: list, white_balls: list) -> list[Ball]:
     return balls
 
 
-def filter_cross_zone_detections(
-    orange_balls: list,
-    white_balls: list,
-    cross_point: Point | None,
-) -> tuple[list, list, int]:
-    if cross_point is None:
-        return orange_balls, white_balls, 0
-
-    kept_orange = []
-    kept_white = []
-    skipped = 0
-
-    # The cross can be misread as a ball; do not plan pickups inside its safety zone.
-    for detection in orange_balls:
-        if distance(detection_to_point(detection), cross_point) <= CROSS_SAFETY_RADIUS_CM:
-            skipped += 1
-        else:
-            kept_orange.append(detection)
-
-    for detection in white_balls:
-        if distance(detection_to_point(detection), cross_point) <= CROSS_SAFETY_RADIUS_CM:
-            skipped += 1
-        else:
-            kept_white.append(detection)
-
-    return kept_orange, kept_white, skipped
-
-
 def make_warped_image(raw_image):
     warped_image = find_arena(raw_image, WARP_W, WARP_H)
 
@@ -200,7 +146,7 @@ def run_object_detection(raw_image) -> tuple[list, list, object | None]:
         detection_result = find_objects_in_image(raw_image, WARP_W, WARP_H)
 
     orange_balls, white_balls, cross_position = unpack_detections(detection_result)
-    return deduplicate_detections(orange_balls), deduplicate_detections(white_balls), cross_position
+    return orange_balls, white_balls, cross_position
 
 
 def score_analysis(
@@ -209,7 +155,6 @@ def score_analysis(
     white_balls: list,
     cross_position,
     robot_pose: RobotPose | None,
-    skipped_cross_zone_balls: int,
     blocked_direct_segments: int,
 ) -> tuple[int, list[str]]:
     score = 0
@@ -245,9 +190,6 @@ def score_analysis(
     else:
         notes.append("cross missing")
 
-    if skipped_cross_zone_balls:
-        notes.append(f"{skipped_cross_zone_balls} skipped near cross")
-
     if blocked_direct_segments:
         score += 350
         notes.append(f"{blocked_direct_segments} A* obstacle segments")
@@ -257,39 +199,37 @@ def score_analysis(
     return score, notes
 
 
-def count_blocked_direct_segments(points: list[Point], cross_point: Point | None) -> int:
-    if cross_point is None:
+def count_blocked_direct_segments(points: list[Point], cross_obstacle: CrossObstacle | None) -> int:
+    if cross_obstacle is None:
         return 0
 
     return sum(
         1
         for start, end in zip(points, points[1:])
-        if straight_line_crosses_circle(start, end, cross_point, CROSS_SAFETY_RADIUS_CM)
+        if straight_line_crosses_obstacle(start, end, cross_obstacle)
     )
 
 
 def analyze_image(path: Path) -> ImageAnalysis:
     raw_image = cv2.imread(str(path))
     if raw_image is None:
-        return ImageAnalysis(path, None, None, [], [], [], [], None, None, None, [], 0, 0, -1, ["cannot load image"])
+        return ImageAnalysis(path, None, None, [], [], [], [], None, None, None, None, [], 0, -1, ["cannot load image"])
 
     warped_image = make_warped_image(raw_image)
     detected_orange_balls, detected_white_balls, cross_position = run_object_detection(raw_image)
     cross_point = get_cross_point(cross_position)
-    orange_balls, white_balls, skipped_cross_zone_balls = filter_cross_zone_detections(
-        detected_orange_balls,
-        detected_white_balls,
-        cross_point,
-    )
+    cross_obstacle = build_cross_obstacle(cross_position, WARP_W, WARP_H)
+    orange_balls = detected_orange_balls
+    white_balls = detected_white_balls
     robot_pose = detect_robot_pose(raw_image, warp_w_px=WARP_W, warp_h_px=WARP_H)
     balls = build_balls(orange_balls, white_balls)
     blocked_direct_segments = 0
 
     if robot_pose is not None and balls:
         goal_a = Goal(name="Goal A", position=GOAL_A_POSITION)
-        route = choose_route(robot_pose.position, balls, goal_a)
+        route = choose_route(robot_pose.position, balls, goal_a, cross_obstacle=cross_obstacle)
         route_points = [robot_pose.position] + [target.pickup_point for target in route] + [goal_a.position]
-        blocked_direct_segments = count_blocked_direct_segments(route_points, cross_point)
+        blocked_direct_segments = count_blocked_direct_segments(route_points, cross_obstacle)
 
     score, notes = score_analysis(
         warped_image,
@@ -297,7 +237,6 @@ def analyze_image(path: Path) -> ImageAnalysis:
         white_balls,
         cross_position,
         robot_pose,
-        skipped_cross_zone_balls,
         blocked_direct_segments,
     )
 
@@ -311,9 +250,9 @@ def analyze_image(path: Path) -> ImageAnalysis:
         white_balls=white_balls,
         cross_position=cross_position,
         cross_point=cross_point,
+        cross_obstacle=cross_obstacle,
         robot_pose=robot_pose,
         balls=balls,
-        skipped_cross_zone_balls=skipped_cross_zone_balls,
         blocked_direct_segments=blocked_direct_segments,
         score=score,
         notes=notes,
@@ -363,21 +302,33 @@ def same_point(point_a: Point, point_b: Point) -> bool:
     return abs(point_a.x - point_b.x) < 0.01 and abs(point_a.y - point_b.y) < 0.01
 
 
-def draw_cross(image, cross_position, cross_point: Point | None) -> None:
+def draw_cross(image, cross_position, cross_obstacle: CrossObstacle | None) -> None:
     if isinstance(cross_position, dict):
         if "vertical_box" in cross_position:
             cv2.drawContours(image, [cross_position["vertical_box"]], 0, (0, 0, 180), 2)
         if "horizontal_box" in cross_position:
             cv2.drawContours(image, [cross_position["horizontal_box"]], 0, (0, 0, 220), 2)
 
-    if cross_point is None:
+    if cross_obstacle is None:
         return
 
-    center_px = to_pixel_point(cross_point)
-    radius_px = cm_radius_to_px_axes(cross_point, CROSS_SAFETY_RADIUS_CM)
-    cv2.circle(image, center_px, 5, (0, 0, 255), -1)
-    cv2.ellipse(image, center_px, radius_px, 0, 0, 360, (0, 0, 255), 2)
-    draw_label(image, "Cross safety", cross_point, (0, 0, 255))
+    for arm in cross_obstacle.arms:
+        margin = cross_obstacle.safety_margin_cm
+        corner_a = to_pixel_point(Point(arm.min_x - margin, arm.max_y + margin))
+        corner_b = to_pixel_point(Point(arm.max_x + margin, arm.min_y - margin))
+        x1, y1 = corner_a
+        x2, y2 = corner_b
+        cv2.rectangle(image, (min(x1, x2), min(y1, y2)), (max(x1, x2), max(y1, y2)), (0, 0, 255), 2)
+
+    if cross_obstacle.fallback_center is not None:
+        center_px = to_pixel_point(cross_obstacle.fallback_center)
+        cv2.circle(image, center_px, 5, (0, 0, 255), -1)
+
+        if not cross_obstacle.arms:
+            radius_px = cm_radius_to_px_axes(cross_obstacle.fallback_center, cross_obstacle.fallback_radius_cm)
+            cv2.ellipse(image, center_px, radius_px, 0, 0, 360, (0, 0, 255), 2)
+
+        draw_label(image, "Cross safety", cross_obstacle.fallback_center, (0, 0, 255))
 
 
 def draw_robot(image, robot_pose: RobotPose) -> None:
@@ -419,32 +370,75 @@ def draw_astar_segment(image, path_points: list[Point]) -> None:
         )
 
 
-def draw_route(image, robot_pose: RobotPose, route, goal_a: Goal, cross_point: Point | None) -> tuple[list[Point], int]:
-    route_points = [robot_pose.position] + [target.pickup_point for target in route] + [goal_a.position]
-    astar_path_points: list[Point] = []
-    failed_segments = 0
+def _extend_path(total_path: list[Point], segment_path: list[Point]) -> None:
+    if total_path:
+        total_path.extend(segment_path[1:])
+    else:
+        total_path.extend(segment_path)
 
-    for start_point, end_point in zip(route_points, route_points[1:]):
-        segment_path = plan_path(start_point, end_point, cross_point, CROSS_SAFETY_RADIUS_CM)
+
+def draw_route(
+    image,
+    robot_pose: RobotPose,
+    route,
+    goal_a: Goal,
+    cross_obstacle: CrossObstacle | None,
+) -> tuple[list[Point], list[Point], int]:
+    raw_path_points: list[Point] = []
+    simplified_path_points: list[Point] = []
+    failed_segments = 0
+    current_point = robot_pose.position
+
+    for target in route:
+        blocked_points = [other.ball.position for other in route if not other.ball.is_vip] if target.ball.is_vip else None
+        segment_path = plan_path(
+            current_point,
+            target.pickup_point,
+            cross_obstacle=cross_obstacle,
+            blocked_points=blocked_points,
+        )
 
         if not segment_path:
             failed_segments += 1
             cv2.arrowedLine(
                 image,
-                to_pixel_point(start_point),
-                to_pixel_point(end_point),
+                to_pixel_point(current_point),
+                to_pixel_point(target.pickup_point),
                 (0, 0, 255),
                 2,
                 tipLength=0.08,
             )
+            current_point = target.pickup_point
             continue
 
-        draw_astar_segment(image, segment_path)
+        simplified_segment = smooth_path(
+            segment_path,
+            cross_obstacle=cross_obstacle,
+            blocked_points=blocked_points,
+        )
+        draw_astar_segment(image, simplified_segment)
 
-        if astar_path_points:
-            astar_path_points.extend(segment_path[1:])
-        else:
-            astar_path_points.extend(segment_path)
+        _extend_path(raw_path_points, segment_path)
+        _extend_path(simplified_path_points, simplified_segment)
+
+        current_point = target.pickup_point
+
+    goal_path = plan_path(current_point, goal_a.position, cross_obstacle=cross_obstacle)
+    if not goal_path:
+        failed_segments += 1
+        cv2.arrowedLine(
+            image,
+            to_pixel_point(current_point),
+            to_pixel_point(goal_a.position),
+            (0, 0, 255),
+            2,
+            tipLength=0.08,
+        )
+    else:
+        simplified_goal_path = smooth_path(goal_path, cross_obstacle=cross_obstacle)
+        draw_astar_segment(image, simplified_goal_path)
+        _extend_path(raw_path_points, goal_path)
+        _extend_path(simplified_path_points, simplified_goal_path)
 
     for index, target in enumerate(route, start=1):
         pickup_point = target.pickup_point
@@ -455,10 +449,10 @@ def draw_route(image, robot_pose: RobotPose, route, goal_a: Goal, cross_point: P
         draw_label(image, str(index), pickup_point, (0, 255, 0), scale=0.65)
         cv2.arrowedLine(image, pickup_px, to_pixel_point(ball_point), (0, 255, 255), 2, tipLength=0.25)
 
-    return astar_path_points, failed_segments
+    return raw_path_points, simplified_path_points, failed_segments
 
 
-def draw_demo(analysis: ImageAnalysis) -> tuple[list, list[Point], int]:
+def draw_demo(analysis: ImageAnalysis) -> tuple[list, list[Point], list[Point], int]:
     if analysis.warped_image is None:
         raise RuntimeError("Arena could not be detected. Cannot create demo image.")
     if analysis.robot_pose is None:
@@ -468,16 +462,22 @@ def draw_demo(analysis: ImageAnalysis) -> tuple[list, list[Point], int]:
 
     image = analysis.warped_image.copy()
     goal_a = Goal(name="Goal A", position=GOAL_A_POSITION)
-    route = choose_route(analysis.robot_pose.position, analysis.balls, goal_a)
+    route = choose_route(analysis.robot_pose.position, analysis.balls, goal_a, cross_obstacle=analysis.cross_obstacle)
 
-    draw_cross(image, analysis.cross_position, analysis.cross_point)
+    draw_cross(image, analysis.cross_position, analysis.cross_obstacle)
     draw_robot(image, analysis.robot_pose)
     draw_balls(image, analysis.balls)
 
     cv2.circle(image, to_pixel_point(goal_a.position), 10, (0, 200, 255), 3)
-    draw_label(image, "Goal A temp", goal_a.position, (0, 200, 255))
+    draw_label(image, "Goal A", goal_a.position, (0, 200, 255))
 
-    path_points, failed_segments = draw_route(image, analysis.robot_pose, route, goal_a, analysis.cross_point)
+    raw_path_points, simplified_path_points, failed_segments = draw_route(
+        image,
+        analysis.robot_pose,
+        route,
+        goal_a,
+        analysis.cross_obstacle,
+    )
 
     cv2.putText(
         image,
@@ -491,16 +491,23 @@ def draw_demo(analysis: ImageAnalysis) -> tuple[list, list[Point], int]:
     )
 
     cv2.imwrite(str(OUTPUT_PATH), image)
-    return route, path_points, failed_segments
+    return route, raw_path_points, simplified_path_points, failed_segments
 
 
-def print_demo_summary(analysis: ImageAnalysis, route, path_points: list[Point], failed_segments: int) -> None:
+def print_demo_summary(
+    analysis: ImageAnalysis,
+    route,
+    raw_path_points: list[Point],
+    simplified_path_points: list[Point],
+    failed_segments: int,
+) -> None:
     print(f"Chosen image: {analysis.path}")
     print(f"Why chosen: score={analysis.score} | {', '.join(analysis.notes)}")
     print(f"Orange balls detected: {len(analysis.detected_orange_balls)}")
     print(f"White balls detected: {len(analysis.detected_white_balls)}")
-    print(f"Usable balls after cross safety filter: {len(analysis.balls)}")
-    print(f"Ball detections skipped near cross: {analysis.skipped_cross_zone_balls}")
+    print(f"Total detected balls: {len(analysis.balls)}")
+    print(f"Total route targets: {len(route)}")
+    print("All detections are treated as real route targets")
     print(f"Cross data: {analysis.cross_position}")
 
     if analysis.robot_pose is not None:
@@ -509,19 +516,25 @@ def print_demo_summary(analysis: ImageAnalysis, route, path_points: list[Point],
             f"heading={analysis.robot_pose.heading_degrees:.1f} deg | marker={analysis.robot_pose.marker_id}"
         )
 
+    vip_target = next((target for target in route if target.ball.is_vip), None)
+    if vip_target is not None:
+        print(f"VIP target: {vip_target.ball.name}")
+
+    print(f"Quadrant order used: {route_quadrant_order(route)}")
     print("Planned route:")
     for index, target in enumerate(route, start=1):
         print(
             f"{index}. {target.ball.name} | VIP={target.ball.is_vip} | "
             f"pickup=({target.pickup_point.x:.1f}, {target.pickup_point.y:.1f}) | "
-            f"face={target.face_direction}"
+            f"face={target.face_direction} | wall={target.is_wall_pickup}"
         )
 
     print("A* pathfinding used: yes")
-    print(f"A* path points created: {len(path_points)}")
+    print(f"Raw A* path points created: {len(raw_path_points)}")
+    print(f"Simplified waypoint count: {len(simplified_path_points)}")
     print(f"A* failed segments: {failed_segments}")
     print(f"Direct route segments crossing cross zone: {analysis.blocked_direct_segments}")
-    print(f"Goal A placeholder: ({GOAL_A_POSITION.x:.1f}, {GOAL_A_POSITION.y:.1f}) on right side")
+    print(f"Goal A fixed: ({GOAL_A_POSITION.x:.1f}, {GOAL_A_POSITION.y:.1f}) on right side")
     print(f"Output path: {OUTPUT_PATH}")
 
 
@@ -535,5 +548,11 @@ if __name__ == "__main__":
     else:
         analysis = choose_best_image()
 
-    route_result, demo_path_points, demo_failed_segments = draw_demo(analysis)
-    print_demo_summary(analysis, route_result, demo_path_points, demo_failed_segments)
+    route_result, raw_demo_path_points, simplified_demo_path_points, demo_failed_segments = draw_demo(analysis)
+    print_demo_summary(
+        analysis,
+        route_result,
+        raw_demo_path_points,
+        simplified_demo_path_points,
+        demo_failed_segments,
+    )

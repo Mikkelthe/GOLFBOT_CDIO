@@ -1,32 +1,37 @@
 import argparse
 from math import cos, radians, sin
+from pathlib import Path
+import sys
 
 import cv2
 
+if __package__ is None or __package__ == "":
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 from Object_Tracking.Course_detecter import find_arena
 from Object_Tracking.Object_Tracking import find_objects_in_image, px_to_world_cm, world_cm_to_px
+from robot_logic.navigation_config import GOAL_A_X_CM, GOAL_A_Y_CM, GOAL_B_X_CM, GOAL_B_Y_CM, WARP_H, WARP_W
 from robot_logic.robot_detection.aruco_robot_detector import detect_robot_pose
-from robot_logic.route_planning.pathfinder import plan_path
+from robot_logic.route_planning.obstacles import CrossObstacle, build_cross_obstacle
+from robot_logic.route_planning.pathfinder import plan_path, smooth_path
 from robot_logic.route_planning.route_planner import (
-    CROSS_SAFETY_RADIUS_CM,
     FIELD_HEIGHT_CM,
     FIELD_WIDTH_CM,
     Ball,
     Goal,
     Point,
     choose_route,
+    route_quadrant_order,
 )
 
 
-IMAGE_PATH = "Images/img.png"
+IMAGE_PATH = "Images/captured_image_12.jpg"
 OUTPUT_PATH = "robot_logic/route_planning/visual_route_output.jpg"
-WARP_W = 1200
-WARP_H = 800
 ROBOT_HEADING_ARROW_CM = 12
 
-# Goal positions are fixed by field setup. Confirm exact coordinates with team.
-LEFT_GOAL_POSITION = Point(3.0, FIELD_HEIGHT_CM / 2.0)
-RIGHT_GOAL_POSITION = Point(FIELD_WIDTH_CM - 3.0, FIELD_HEIGHT_CM / 2.0)
+# Goal A is fixed at the middle of the outermost right wall.
+LEFT_GOAL_POSITION = Point(GOAL_B_X_CM, GOAL_B_Y_CM)
+RIGHT_GOAL_POSITION = Point(GOAL_A_X_CM, GOAL_A_Y_CM)
 GOAL_A_POSITION = RIGHT_GOAL_POSITION
 
 
@@ -99,6 +104,10 @@ def unpack_detections(detection_result):
         orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position = detection_result
         return orange_balls + dark_orange_balls, white_balls + shadowywhite_balls, cross_position
 
+    if len(detection_result) >= 9:
+        orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position = detection_result[:5]
+        return (orange_balls or []) + (dark_orange_balls or []), (white_balls or []) + (shadowywhite_balls or []), cross_position
+
     raise RuntimeError(f"Unexpected detection result format: {len(detection_result)} values")
 
 
@@ -132,6 +141,33 @@ def same_point(point_a: Point, point_b: Point) -> bool:
     return abs(point_a.x - point_b.x) < 0.01 and abs(point_a.y - point_b.y) < 0.01
 
 
+def draw_cross_obstacle(image, cross_position, cross_obstacle: CrossObstacle | None) -> None:
+    if isinstance(cross_position, dict):
+        if "vertical_box" in cross_position:
+            cv2.drawContours(image, [cross_position["vertical_box"]], 0, (0, 0, 180), 2)
+        if "horizontal_box" in cross_position:
+            cv2.drawContours(image, [cross_position["horizontal_box"]], 0, (0, 0, 220), 2)
+
+    if cross_obstacle is None:
+        return
+
+    for arm in cross_obstacle.arms:
+        margin = cross_obstacle.safety_margin_cm
+        corner_a = to_pixel_point(Point(arm.min_x - margin, arm.max_y + margin))
+        corner_b = to_pixel_point(Point(arm.max_x + margin, arm.min_y - margin))
+        x1, y1 = corner_a
+        x2, y2 = corner_b
+        cv2.rectangle(image, (min(x1, x2), min(y1, y2)), (max(x1, x2), max(y1, y2)), (0, 0, 255), 2)
+
+    if cross_obstacle.fallback_center is not None:
+        center_px = to_pixel_point(cross_obstacle.fallback_center)
+        cv2.circle(image, center_px, 5, (0, 0, 255), -1)
+        if not cross_obstacle.arms:
+            cross_radius_px = cm_radius_to_px_axes(cross_obstacle.fallback_center, cross_obstacle.fallback_radius_cm)
+            cv2.ellipse(image, center_px, cross_radius_px, 0, 0, 360, (0, 0, 255), 2)
+        draw_label(image, "Cross", cross_obstacle.fallback_center, (0, 0, 255))
+
+
 if __name__ == "__main__":
     arguments = parse_arguments()
     image_path = arguments.image_path
@@ -158,23 +194,50 @@ if __name__ == "__main__":
         raise RuntimeError("Robot marker not detected. Cannot plan route without robot position.")
 
     goal_a = Goal(name="Goal A", position=GOAL_A_POSITION)
-    planned_route = choose_route(robot_pose.position, balls, goal_a)
-    cross_point = get_cross_point(cross_position)
-    route_points = [robot_pose.position] + [target.pickup_point for target in planned_route] + [goal_a.position]
-    path_points: list[Point] = []
+    cross_obstacle = build_cross_obstacle(cross_position, WARP_W, WARP_H)
+    planned_route = choose_route(robot_pose.position, balls, goal_a, cross_obstacle=cross_obstacle)
+    raw_path_points: list[Point] = []
+    simplified_path_points: list[Point] = []
     failed_astar_segments = 0
+    current_point = robot_pose.position
 
-    for start_point, end_point in zip(route_points, route_points[1:]):
-        segment_path = plan_path(start_point, end_point, cross_point, CROSS_SAFETY_RADIUS_CM)
+    def extend_path(total_path: list[Point], segment_path: list[Point]) -> None:
+        if total_path:
+            total_path.extend(segment_path[1:])
+        else:
+            total_path.extend(segment_path)
+
+    for target in planned_route:
+        blocked_points = [other.ball.position for other in planned_route if not other.ball.is_vip] if target.ball.is_vip else None
+        segment_path = plan_path(
+            current_point,
+            target.pickup_point,
+            cross_obstacle=cross_obstacle,
+            blocked_points=blocked_points,
+        )
 
         if not segment_path:
             failed_astar_segments += 1
+            current_point = target.pickup_point
             continue
 
-        if path_points:
-            path_points.extend(segment_path[1:])
-        else:
-            path_points.extend(segment_path)
+        simplified_segment = smooth_path(
+            segment_path,
+            cross_obstacle=cross_obstacle,
+            blocked_points=blocked_points,
+        )
+        extend_path(raw_path_points, segment_path)
+        extend_path(simplified_path_points, simplified_segment)
+
+        current_point = target.pickup_point
+
+    goal_path = plan_path(current_point, goal_a.position, cross_obstacle=cross_obstacle)
+    if not goal_path:
+        failed_astar_segments += 1
+    else:
+        simplified_goal_path = smooth_path(goal_path, cross_obstacle=cross_obstacle)
+        extend_path(raw_path_points, goal_path)
+        extend_path(simplified_path_points, simplified_goal_path)
 
     robot_heading_radians = radians(robot_pose.heading_degrees)
     heading_end_point = Point(
@@ -196,11 +259,7 @@ if __name__ == "__main__":
     cv2.circle(warped_image, to_pixel_point(goal_a.position), 8, (0, 200, 255), 2)
     draw_label(warped_image, goal_a.name, goal_a.position, (0, 200, 255))
 
-    if cross_point is not None:
-        cross_radius_px = cm_radius_to_px_axes(cross_point, CROSS_SAFETY_RADIUS_CM)
-        cv2.circle(warped_image, to_pixel_point(cross_point), 5, (0, 0, 255), -1)
-        cv2.ellipse(warped_image, to_pixel_point(cross_point), cross_radius_px, 0, 0, 360, (0, 0, 255), 2)
-        draw_label(warped_image, "Cross", cross_point, (0, 0, 255))
+    draw_cross_obstacle(warped_image, cross_position, cross_obstacle)
 
     for ball in balls:
         ball_color = (0, 140, 255) if ball.is_vip else (255, 255, 255)
@@ -209,6 +268,9 @@ if __name__ == "__main__":
 
     print(f"Orange balls detected: {len(orange_balls)}")
     print(f"White balls detected: {len(white_balls)}")
+    print(f"Total route targets: {len(planned_route)}")
+    print("All detections are treated as real route targets")
+    print(f"Quadrant order used: {route_quadrant_order(planned_route)}")
     print(f"Cross position: {cross_position}")
     print(
         f"Robot pose: ({robot_pose.position.x:.1f}, {robot_pose.position.y:.1f}) | "
@@ -223,7 +285,7 @@ if __name__ == "__main__":
         print(
             f"{index}. {target.ball.name} | VIP={target.ball.is_vip} | "
             f"pickup=({pickup_point.x:.1f}, {pickup_point.y:.1f}) | "
-            f"face={target.face_direction}"
+            f"face={target.face_direction} | wall={target.is_wall_pickup}"
         )
 
         cv2.circle(warped_image, to_pixel_point(pickup_point), 6, (0, 255, 0), 2)
@@ -236,11 +298,13 @@ if __name__ == "__main__":
             1,
             tipLength=0.25,
         )
-    for start_point, end_point in zip(path_points, path_points[1:]):
+
+    for start_point, end_point in zip(simplified_path_points, simplified_path_points[1:]):
         cv2.line(warped_image, to_pixel_point(start_point), to_pixel_point(end_point), (0, 255, 0), 2)
 
     print("A* pathfinding used: yes")
-    print(f"A* path points created: {len(path_points)}")
+    print(f"Raw A* path points created: {len(raw_path_points)}")
+    print(f"Simplified waypoint count: {len(simplified_path_points)}")
     print(f"A* failed segments: {failed_astar_segments}")
 
     cv2.imwrite(OUTPUT_PATH, warped_image)
