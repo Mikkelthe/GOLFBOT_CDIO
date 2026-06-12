@@ -1,4 +1,6 @@
 from typing import Callable
+
+from Object_Tracking.Course_detecter import find_arena,find_red_cross_boxes
 from golfbot import *
 import numpy as np
 from ..Linalg.vector import Vector2
@@ -51,19 +53,26 @@ class Transform:
 
 
 class GolfBotMemory:
-    def __init__(self):
+    def __init__(self,img):
         # TODO: Store more stuff in memory
-        self.courseBallCount = 0
+        self.quadrant = 0
+        self.currentBall = []
+        self.whiteBalls = []
+        self.orangeBalls = []
         self.storedBallCount = 0
         self.transform = Transform()
-        self.forwardDirection = [0, 1] # Direction 
+        self.forwardDirection = [0, 1] # Direction
+        self.arena = find_arena(img,1500,1000)
+        self.cross = 0
+        self.goingToCornerLine = False
+
 
 class State:
     def __init__(self):
         self.handler = None
         self.transitions = []
 
-    def setHandler(self, handler: Callable[[GolfBot], None]):
+    def setHandler(self, handler: Callable[[GolfBotMemory], None]):
         self.handler = handler
 
     def addTransition(self, transition):
@@ -76,7 +85,7 @@ class Transition:
         self.stateTo = stateTo
         self.conditionHandler = None
     
-    def setConditionHandler(self, handler: Callable[[GolfBot], bool]):
+    def setConditionHandler(self, handler: Callable[[GolfBotMemory], bool]):
         self.conditionHandler = handler 
 
 class StateMachine:
