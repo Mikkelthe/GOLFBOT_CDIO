@@ -113,7 +113,7 @@ CENTER_POINT_CM = Point(COURT_W_CM / 2, COURT_H_CM / 2)
 warped = find_arena(img, out_w=WARP_W, out_h=WARP_H)
 
 #finds all objects in img
-orange_ball, white_ball, dark_orange_balls, shadowywhite_balls, cross_position = find_objects_in_image(img, WARP_W, WARP_H)
+orange_ball, white_ball, dark_orange_balls, shadowywhite_balls, cross_position, a, b, c, d = find_objects_in_image(img, WARP_W, WARP_H)
 
 #draw objects on warped
 #draw_detections_on_warp(warped, orange_ball, "position", warp_w_px=WARP_W, warp_h_px=WARP_H, court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM)
@@ -167,6 +167,9 @@ warped = cv2.arrowedLine(warped, botCoordinates, end_point, (0,0,255), 3)
 
 #draw arrow from center of bot to center of ball on warped
 warped = cv2.arrowedLine(warped, botCoordinates, ballCoordinates, (0,255,0), 3)
+
+
+
 
 #resize and show window with picture: warped
 warped = cv2.resize(warped, (600, 400))
