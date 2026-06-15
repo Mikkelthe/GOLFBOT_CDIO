@@ -31,7 +31,7 @@ while run:
     vis = frame.copy()
     vis = find_arena(vis, WARP_W, WARP_H)
 
-    dilated = cv2.dilate(vis, np.ones((1,1), np.uint8), iterations=1)
+    dilated = cv2.dilate(vis, np.ones((3,3), np.uint8), iterations=1)
     blurred = cv2.GaussianBlur(vis, (5,5),0)
 
     orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, omask, domask, wmask, sw, wcenter, ocenter, swcenter, docenter = find_objects_in_image(
