@@ -69,6 +69,11 @@ def find_turn(current_heading, point1, point2):
 
     return turn_flag, turn_angle
 
+#finds the optimal point to approach the goal (delivery point = 24 cm from goal)
+def find_goal_approach_point():
+    approach_point = Point(WARP_W-200, CENTER_POINT_WARP.y)
+    return approach_point
+
 #find the robot position and heading in the picture using an ArUco-marker
 def find_bot(image):
     aruco_dict = cv2.aruco.getPredefinedDictionary(
@@ -186,7 +191,8 @@ warped = cv2.arrowedLine(warped, botCoordinates, end_point, (0,0,255), 3)
 #draw arrow from center of bot to center of ball on warped
 warped = cv2.arrowedLine(warped, botCoordinates, ballCoordinates, (0,255,0), 3)
 
-
+#draw goal approach point
+warped = cv2.circle(warped, (find_goal_approach_point().x,find_goal_approach_point().y), 10, (0,0,255),-1)
 
 
 #resize and show window with picture: warped
