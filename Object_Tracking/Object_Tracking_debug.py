@@ -30,7 +30,7 @@ if __name__ == "__main__":
     COURT_W_CM, COURT_H_CM = court_settings.court_width, court_settings.court_height
 
     if i < imagecount:
-        videodevice = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        videodevice = cv2.VideoCapture(1, cv2.CAP_DSHOW)
         videodevice.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
         videodevice.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
         time.sleep(2)
@@ -39,7 +39,7 @@ if __name__ == "__main__":
         i += 1
         if i%5 == 0:
             print("move")
-            time.sleep(10)
+            sleep(1)
         ret, img = videodevice.read()
         videocapturedimagepath = f"Images/captured_image_{i}.jpg"
 

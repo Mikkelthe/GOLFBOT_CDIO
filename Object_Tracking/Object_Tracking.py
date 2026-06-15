@@ -8,7 +8,7 @@ from .Course_detecter import find_red_cross_center
 from .Course_detecter import find_red_cross_boxes
 from settings import courtSettings
 
-def detect_balls_by_hsv(warped_bgr, lower, upper, lower2=None, upper2=None, min_area=125, max_area=800, min_circularity=0.75):
+def detect_balls_by_hsv(warped_bgr, lower, upper, lower2=None, upper2=None, min_area=150, max_area=850, min_circularity=0.65):
     hsv = cv2.cvtColor(warped_bgr, cv2.COLOR_BGR2HSV)
     if lower2 is None:
         mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
@@ -199,8 +199,8 @@ def find_objects_in_image(img_bgr,w,h):
 
     orange_balls, omask, ocenter = detect_balls_by_hsv(warped, lower=(0, 5, 120), upper=(40, 255, 255), lower2=(0, 0, 0), upper2=(180, 100, 70))
     dark_orange_balls, domask, docenter = detect_balls_by_hsv(warped, lower=(5, 120, 120), upper=(30, 255, 255), lower2=(0, 0, 0), upper2=(180, 100, 70))
-    white_balls, wmask, wcenter = detect_balls_by_hsv(warped, lower=(0, 0, 180), upper=(180, 110, 255), lower2=(0, 0, 0), upper2=(180, 100, 70))
-    shadowywhite_balls, sw, swcenter = detect_balls_by_hsv(blurred, lower=(0, 0, 130), upper=(180, 100, 250), lower2=(0, 0, 0), upper2=(180, 100, 70))
+    white_balls, wmask, wcenter = detect_balls_by_hsv(blurred, lower=(0, 0, 180), upper=(180, 110, 255), lower2=(0, 0, 0), upper2=(180, 100, 65))
+    shadowywhite_balls, sw, swcenter = detect_balls_by_hsv(blurred, lower=(0, 0, 115), upper=(180, 100, 250), lower2=(0, 0, 0), upper2=(180, 100, 65))
     
     cross_position = find_red_cross_boxes(warped)
 
