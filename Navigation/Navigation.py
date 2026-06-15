@@ -104,7 +104,7 @@ images_folder = base_path.parent / "Images"
 image_files = list(images_folder.glob("*.jpg"))
 
 #load image
-img = cv2.imread("arena5.jpg")
+img = cv2.imread("arena.jpg")
 
 #picture dimensions center in pixel
 WARP_W, WARP_H = 1500, 1000
@@ -161,18 +161,19 @@ ground_y = int(round(ground_y + displacement_in_px * math.sin(angle_in_radians))
 
 # Update botCoordinates to the ground-projected pixel coordinates (use a Point if you prefer)
 botCoordinates = (ground_x, ground_y)
-
-
+bot_radius = cm_to_px(17.5, warp_w_px=WARP_W, warp_h_px=WARP_H)
+bot_circle = (botCoordinates, bot_radius)
 #draw bot on warped as circle(current bot radius is 16)
-warped = cv2.circle(warped, botCoordinates, cm_to_px(17.5, warp_w_px=WARP_W, warp_h_px=WARP_H), (0, 0, 255), 3)
+warped = cv2.circle(warped, botCoordinates, bot_radius, (0, 0, 255), 3)
+
 
 #draw bot on warped as rectangle (width=23,5, length=34)
 width_in_px = cm_to_px(23.5)
 length_in_px = cm_to_px(34)
 rect = botCoordinates, (length_in_px, width_in_px), currentHeading
-box = cv2.boxPoints(rect)
-box = box.astype(int)
-cv2.drawContours(warped, [box], 0, (255, 0, 0), 3)
+bot_box = cv2.boxPoints(rect)
+bot_box = bot_box.astype(int)
+cv2.drawContours(warped, [bot_box], 0, (255, 0, 0), 3)
 
 #draw current heading from bot on warped
 arrow_length = 100 #px
