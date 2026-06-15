@@ -193,14 +193,14 @@ def find_objects_in_image(img_bgr,w,h):
         return None, None
 
     dilated = cv2.dilate(warped, np.ones((1,1), np.uint8), iterations=1)
-    blurred = cv2.medianBlur(dilated, 1)
+    blurred = cv2.GaussianBlur(dilated, (3, 3), 0)
     kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
     sharpened = cv2.filter2D(blurred, -1, kernel)
 
-    orange_balls, omask, ocenter = detect_balls_by_hsv(warped, lower=(0, 5, 120), upper=(40, 255, 255), lower2=(0, 0, 0), upper2=(180, 100, 70))
-    dark_orange_balls, domask, docenter = detect_balls_by_hsv(warped, lower=(5, 120, 120), upper=(30, 255, 255), lower2=(0, 0, 0), upper2=(180, 100, 70))
-    white_balls, wmask, wcenter = detect_balls_by_hsv(blurred, lower=(0, 0, 180), upper=(180, 110, 255), lower2=(0, 0, 0), upper2=(180, 100, 65))
-    shadowywhite_balls, sw, swcenter = detect_balls_by_hsv(blurred, lower=(0, 0, 115), upper=(180, 100, 250), lower2=(0, 0, 0), upper2=(180, 100, 65))
+    orange_balls, omask, ocenter = detect_balls_by_hsv(blurred, lower=(0, 5, 120), upper=(40, 255, 255), lower2=(0, 0, 0), upper2=(180, 100, 50))
+    dark_orange_balls, domask, docenter = detect_balls_by_hsv(blurred, lower=(0, 0, 220), upper=(180, 110, 255))
+    white_balls, wmask, wcenter = detect_balls_by_hsv(warped, lower=(0, 0, 200), upper=(180, 110, 255), lower2=(0, 0, 0), upper2=(180, 100, 50))
+    shadowywhite_balls, sw, swcenter = detect_balls_by_hsv(blurred, lower=(0, 0, 115), upper=(180, 100, 250), lower2=(0, 0, 0), upper2=(180, 100, 50))
     
     cross_position = find_red_cross_boxes(warped)
 
@@ -215,26 +215,26 @@ def find_objects_in_image(img_bgr,w,h):
 def group_valid_objects(wcenter, ocenter, swcenter, docenter):
     valid_objects = wcenter.copy()
     valid_objects += swcenter.copy()
+    valid_objects += docenter.copy()
     rounded_objects = list()
     for (coord_x, coord_y) in valid_objects:
-        rounded_objects.append((round(coord_x/4, 0)*4+2, round(coord_y/4, 0)*4+2))
+        rounded_objects.append((round(coord_x/4, 0)*4, round(coord_y/4, 0)*4))
     for (coord_x, coord_y) in rounded_objects:
         if rounded_objects.count((coord_x, coord_y)) > 1:
-            print(f"Removing {rounded_objects.count((coord_x,coord_y))-1} duplicate objects")
+            # print(f"Removing {rounded_objects.count((coord_x,coord_y))-1} duplicate objects")
             rounded_objects.remove((coord_x, coord_y))
 
     valid_vip_objects = ocenter.copy()
-    valid_vip_objects += docenter.copy()
     rounded_vip_objects = list()
     for (coord_x, coord_y) in valid_vip_objects:
-        rounded_vip_objects.append((round(coord_x/4, 0)*4+2, round(coord_y/4, 0)*4+2))
+        rounded_vip_objects.append((round(coord_x/4, 0)*4, round(coord_y/4, 0)*4))
     for (coord_x, coord_y) in rounded_vip_objects:
         if rounded_vip_objects.count((coord_x, coord_y)) > 1:
-            print(f"Removing {rounded_vip_objects.count((coord_x,coord_y))-1} duplicate vip objects")
+            # print(f"Removing {rounded_vip_objects.count((coord_x,coord_y))-1} duplicate vip objects")
             rounded_vip_objects.remove((coord_x, coord_y))
 
     print(f"i found {rounded_objects}. That's {len(rounded_objects)} balls")
-    print(f"i found {rounded_vip_objects}. That's {len(rounded_vip_objects)} super balls")
+    # print(f"i found {rounded_vip_objects}. That's {len(rounded_vip_objects)} super balls")
     return rounded_objects, rounded_vip_objects
 
 def accumulate_valid_objects(accumulated_objects,accumulated_vip_objects,rounded_objects, rounded_vip_objects, index):
@@ -264,7 +264,7 @@ def accumulate_valid_objects(accumulated_objects,accumulated_vip_objects,rounded
         if (coord_x, coord_y) not in real_vip_objects_list and accumulated_vip_objects_list.count((coord_x,coord_y)) > 2:
             real_vip_objects_list.append((coord_x, coord_y))
 
-    print(f"{real_objects_list}")
-    print(f"{real_vip_objects_list}")
+    print(f"{real_objects_list} FINAL LIST {len(real_objects_list)}")
+    print(f"{real_vip_objects_list} FINAL VIPS {len(real_vip_objects_list)}")
 
     return real_objects_list, real_vip_objects_list
