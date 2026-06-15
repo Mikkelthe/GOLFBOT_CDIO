@@ -47,6 +47,9 @@ def find_distance_between_points(point1: Point, point2: Point):
     return np.sqrt(np.square(point2.x - point1.x) + np.square(point2.y - point1.y))
 
 #find the best turn from current heading to a point
+def drive_to_point(point:Point):
+    commands = []
+    return commands
 def find_turn(current_heading, point1, point2):
     direction_radian = np.atan2(point2.y - point1.y, point2.x - point1.x)
     target_direction = round(math.degrees(direction_radian))
@@ -90,6 +93,8 @@ def find_bot(image):
         angle = np.degrees(
             np.arctan2(heading[1], heading[0])
         )
+    else:
+        return None, None
     return center, angle
 
 
@@ -99,7 +104,7 @@ images_folder = base_path.parent / "Images"
 image_files = list(images_folder.glob("*.jpg"))
 
 #load image
-img = cv2.imread("arena.jpg")
+img = cv2.imread("arena3.jpg")
 
 #picture dimensions center in pixel
 WARP_W, WARP_H = 1500, 1000
@@ -113,7 +118,7 @@ CENTER_POINT_CM = Point(COURT_W_CM / 2, COURT_H_CM / 2)
 warped = find_arena(img, out_w=WARP_W, out_h=WARP_H)
 
 #finds all objects in img
-orange_ball, white_ball, dark_orange_balls, shadowywhite_balls, cross_position = find_objects_in_image(img, WARP_W, WARP_H)
+orange_ball, white_ball, dark_orange_balls, shadowywhite_balls, cross_position, a, b, c, d = find_objects_in_image(img, WARP_W, WARP_H)
 
 #draw objects on warped
 #draw_detections_on_warp(warped, orange_ball, "position", warp_w_px=WARP_W, warp_h_px=WARP_H, court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM)
@@ -133,8 +138,8 @@ white_y = white_ball[0][1]
 ballCoordinates = world_cm_to_px(white_x, white_y, WARP_W, WARP_H)
 
 # Calculate parallax distortion for bot
-cam_height_cm = 195.0
-bot_height_cm = 46.0
+cam_height_cm = 174.0
+bot_height_cm = 44.5
 
 # scale factor to convert marker-plane radius -> ground-plane radius
 scale = (cam_height_cm - bot_height_cm) / cam_height_cm  # = 1 / ratio_height
@@ -167,6 +172,9 @@ warped = cv2.arrowedLine(warped, botCoordinates, end_point, (0,0,255), 3)
 
 #draw arrow from center of bot to center of ball on warped
 warped = cv2.arrowedLine(warped, botCoordinates, ballCoordinates, (0,255,0), 3)
+
+
+
 
 #resize and show window with picture: warped
 warped = cv2.resize(warped, (600, 400))
