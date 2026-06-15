@@ -1,0 +1,38 @@
+---
+title: FSM
+---
+stateDiagram-v2
+    direction LR
+    state "Detect balls" as detect
+    state "Collect orange ball" as collectOrange
+    state "Approach orange ball in corner" as approachOrangeInCorner
+    state "Check quadrant" as checkQuadrant
+    state "Find nearest ball" as findNearest
+    state "Approach coordinate in corner" as approachCoordinateInCorner
+    state "Readjust" as readjust
+    state "Approach white ball coordinate" as approachWhiteCoordinate
+    state "Approach new quadrant" as approachNewQuadrant
+    state "Approach narrow goal" as approachNarrow
+    state "Avoid obstacle" as avoidObstacle
+    state "Submit balls" as submit
+    
+    detect --> collectOrange: Orange detected
+    collectOrange --> approachOrangeInCorner: Orange in corner
+    collectOrange --> detect: Orange collected
+    approachOrangeInCorner --> collectOrange: !Orange collected
+    approachOrangeInCorner --> detect: Orange collected
+    detect --> checkQuadrant: !Orange detected & White detected
+    checkQuadrant --> findNearest: White in Quadrant
+    findNearest --> approachCoordinateInCorner: in corner
+    findNearest --> approachWhiteCoordinate: !in corner
+    approachWhiteCoordinate --> readjust: !collected
+    approachWhiteCoordinate --> checkQuadrant: collected
+    readjust --> findNearest: Done readjusting
+    approachCoordinateInCorner --> readjust: !collected
+    approachCoordinateInCorner --> checkQuadrant: collected
+    checkQuadrant --> approachNewQuadrant: !white in quadrant
+    approachNewQuadrant --> detect: in new quadrant
+    detect --> approachNarrow: !orange & !white
+    approachNarrow --> avoidObstacle: obstacle in the way
+    avoidObstacle --> approachNarrow: obstacle avoided
+    approachNarrow --> submit: At goal
