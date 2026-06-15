@@ -8,7 +8,7 @@ from .Course_detecter import find_red_cross_center
 from .Course_detecter import find_red_cross_boxes
 from settings import courtSettings
 
-def detect_balls_by_hsv(warped_bgr, lower, upper, lower2=None, upper2=None, min_area=125, max_area=800, min_circularity=0.75):
+def detect_balls_by_hsv(warped_bgr, lower, upper, lower2=None, upper2=None, min_area=150, max_area=850, min_circularity=0.65):
     hsv = cv2.cvtColor(warped_bgr, cv2.COLOR_BGR2HSV)
     if lower2 is None:
         mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
@@ -21,6 +21,7 @@ def detect_balls_by_hsv(warped_bgr, lower, upper, lower2=None, upper2=None, min_
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     detections = []
+    ballcenter = []
     for c in contours:
         area = cv2.contourArea(c)
         if area < min_area or area > max_area:
@@ -42,11 +43,12 @@ def detect_balls_by_hsv(warped_bgr, lower, upper, lower2=None, upper2=None, min_
             continue
         realx, realy = px_to_world_cm(x, y, warp_w_px=width, warp_h_px=height)
         detections.append((float(realx), float(realy), int(x), int(y), int(r), float(area), float(circularity)))
+        ballcenter.append((float(realx), float(realy)))
 
     # Optional: sort biggest first (often helps stability)
     detections.sort(key=lambda t: t[5], reverse=True)
 
-    return detections, mask
+    return detections, mask, ballcenter
 
 #Coordinates
 def px_to_world_cm(
@@ -195,10 +197,10 @@ def find_objects_in_image(img_bgr,w,h):
     kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
     sharpened = cv2.filter2D(blurred, -1, kernel)
 
-    orange_balls, omask = detect_balls_by_hsv(warped, lower=(0, 5, 120), upper=(40, 255, 255), lower2=(0, 0, 0), upper2=(180, 100, 80))
-    dark_orange_balls, domask = detect_balls_by_hsv(warped, lower=(5, 120, 120), upper=(30, 255, 255), lower2=(0, 0, 0), upper2=(180, 100, 80))
-    white_balls, wmask = detect_balls_by_hsv(warped, lower=(0, 0, 180), upper=(180, 90, 255), lower2=(0, 0, 0), upper2=(180, 100, 80))
-    shadowywhite_balls, sw = detect_balls_by_hsv(blurred, lower=(0, 0, 130), upper=(180, 100, 250), lower2=(0, 0, 0), upper2=(180, 100, 80))
+    orange_balls, omask, ocenter = detect_balls_by_hsv(warped, lower=(0, 5, 120), upper=(40, 255, 255), lower2=(0, 0, 0), upper2=(180, 100, 70))
+    dark_orange_balls, domask, docenter = detect_balls_by_hsv(warped, lower=(5, 120, 120), upper=(30, 255, 255), lower2=(0, 0, 0), upper2=(180, 100, 70))
+    white_balls, wmask, wcenter = detect_balls_by_hsv(blurred, lower=(0, 0, 180), upper=(180, 110, 255), lower2=(0, 0, 0), upper2=(180, 100, 65))
+    shadowywhite_balls, sw, swcenter = detect_balls_by_hsv(blurred, lower=(0, 0, 115), upper=(180, 100, 250), lower2=(0, 0, 0), upper2=(180, 100, 65))
     
     cross_position = find_red_cross_boxes(warped)
 
@@ -208,4 +210,61 @@ def find_objects_in_image(img_bgr,w,h):
         print(len(cross_position))
         print(cross_position)
 
-    return orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, omask, domask, wmask, sw
+    return orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, omask, domask, wmask, sw, wcenter, ocenter, swcenter, docenter
+
+def group_valid_objects(wcenter, ocenter, swcenter, docenter):
+    valid_objects = wcenter.copy()
+    valid_objects += swcenter.copy()
+    rounded_objects = list()
+    for (coord_x, coord_y) in valid_objects:
+        rounded_objects.append((round(coord_x/4, 0)*4+2, round(coord_y/4, 0)*4+2))
+    for (coord_x, coord_y) in rounded_objects:
+        if rounded_objects.count((coord_x, coord_y)) > 1:
+            print(f"Removing {rounded_objects.count((coord_x,coord_y))-1} duplicate objects")
+            rounded_objects.remove((coord_x, coord_y))
+
+    valid_vip_objects = ocenter.copy()
+    valid_vip_objects += docenter.copy()
+    rounded_vip_objects = list()
+    for (coord_x, coord_y) in valid_vip_objects:
+        rounded_vip_objects.append((round(coord_x/4, 0)*4+2, round(coord_y/4, 0)*4+2))
+    for (coord_x, coord_y) in rounded_vip_objects:
+        if rounded_vip_objects.count((coord_x, coord_y)) > 1:
+            print(f"Removing {rounded_vip_objects.count((coord_x,coord_y))-1} duplicate vip objects")
+            rounded_vip_objects.remove((coord_x, coord_y))
+
+    print(f"i found {rounded_objects}. That's {len(rounded_objects)} balls")
+    print(f"i found {rounded_vip_objects}. That's {len(rounded_vip_objects)} super balls")
+    return rounded_objects, rounded_vip_objects
+
+def accumulate_valid_objects(accumulated_objects,accumulated_vip_objects,rounded_objects, rounded_vip_objects, index):
+    if index < 5:
+        accumulated_objects.append(rounded_objects)
+        accumulated_vip_objects.append(rounded_vip_objects)
+    else:
+        accumulated_objects[index%5] = rounded_objects
+        accumulated_vip_objects[index%5] = rounded_vip_objects
+
+    # converting arrays to lists
+    accumulated_objects_list = list()
+    accumulated_vip_objects_list = list()
+    for obj in accumulated_objects:
+        accumulated_objects_list += obj
+    for obj in accumulated_vip_objects:
+        accumulated_vip_objects_list += obj
+
+    # filtering persistent objects
+    real_objects_list = list()
+    real_vip_objects_list = list()
+    for (coord_x,coord_y) in accumulated_objects_list:
+        if (coord_x, coord_y) not in real_objects_list and accumulated_objects_list.count((coord_x,coord_y)) > 2:
+            real_objects_list.append((coord_x, coord_y))
+
+    for (coord_x, coord_y) in accumulated_vip_objects_list:
+        if (coord_x, coord_y) not in real_vip_objects_list and accumulated_vip_objects_list.count((coord_x,coord_y)) > 2:
+            real_vip_objects_list.append((coord_x, coord_y))
+
+    print(f"{real_objects_list}")
+    print(f"{real_vip_objects_list}")
+
+    return real_objects_list, real_vip_objects_list
