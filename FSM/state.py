@@ -5,10 +5,9 @@ from Object_Tracking.Course_detecter import CourseDetector
 from golfbot import *
 from Navigation.Controller import Controller
 import numpy as np
-from ..Linalg.vector import Vector2
-from ..Linalg.matrix import Matrix22
+from utils.Linalg.vector import Vector2
 import cv2
-from Navigation.Navigation import find_bot, find_optimal_corner_approach, drive_to_point
+from Navigation.Navigation import find_bot
 
 
 # TODO: Use vectors and matricies

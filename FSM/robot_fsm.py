@@ -1,9 +1,7 @@
-from fontTools.ufoLib import deprecatedFontInfoAttributesVersion2
-
 from .state import *
 from Object_Tracking.Object_Tracking import find_objects_in_image, px_to_world_cm, find_arena, cm_to_px
 from Navigation.Navigation import find_bot, find_optimal_corner_approach, drive_to_point
-from Navigation.point import Point
+from utils.point import Point
 from Navigation.Controller import Controller
 from settings.courtSettings import court_settings
 

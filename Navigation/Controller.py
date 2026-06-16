@@ -1,5 +1,5 @@
 from socket import *
-from Linalg.vector import Vector2
+from utils.Linalg.vector import Vector2
 
 class Controller:
     def __init__(self, robot_host: tuple[str, int], esp32_host: tuple[str,int]):

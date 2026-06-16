@@ -1,8 +1,5 @@
 import math
-import cv2
-import numpy as np
-from pathlib import Path
-from point import *
+from utils.point import *
 from Object_Tracking.Object_Tracking import *
 
 # find the relative vector from corner to bot
