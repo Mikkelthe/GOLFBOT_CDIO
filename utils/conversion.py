@@ -61,7 +61,6 @@ class Conversion:
     # Requires court to be uniform to work correctly
     @staticmethod
     def cm_to_px(
-            self,
             radius_cm,
             warp_w_px=court_settings.image_width,
             warp_h_px=court_settings.image_height,
