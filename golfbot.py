@@ -7,6 +7,7 @@ from pybricks.parameters import Port, Stop, Direction, Button, Color
 from pybricks.tools import wait, StopWatch, DataLog
 from pybricks.robotics import DriveBase
 from pybricks.media.ev3dev import SoundFile, ImageFile
+import math
 
 class GolfBot:
     def __init__(self, brick: EV3Brick, leftMotor: Motor, rightMotor: Motor, rampMotor: Motor):
@@ -21,19 +22,40 @@ class GolfBot:
         self.turnSpeed = 500
         self.anglePerDeg = 10.0
 
-        self.rampSpeed = 300
+        self.rampSpeed = 100
     
+    def move_dir(self, x, y):
+        a = [x, y]
+        b = [0, 1]
+        magnitude = math.sqrt(x*x + y*y)
+        x_norm = x/magnitude
+        y_norm = y/magnitude
+        signedAngle = math.atan2(
+            a[0]*b[1] - a[1]*b[0],
+            a[0]*b[0] + a[1]*b[1])
+    
+        dot_left = -x_norm
+        dot_right = x_norm
+        dot_up = y_norm
+
+        if y > 0:
+            self.leftMotor.run((dot_up + dot_left) * self.moveSpeed)
+            self.rightMotor.run((dot_up + dot_right) * self.moveSpeed)        
+        else:
+            self.leftMotor.run((dot_up + dot_right) * self.moveSpeed)
+            self.rightMotor.run((dot_up + dot_left) * self.moveSpeed)        
+
     def move_fwd(self):
         self.leftMotor.run(self.moveSpeed)
         self.rightMotor.run(self.moveSpeed)
 
     def move_fwd_left(self):
-        self.leftMotor.run(self.moveSpeed/2)
+        self.leftMotor.run(self.moveSpeed/3)
         self.rightMotor.run(self.moveSpeed)
 
     def move_fwd_right(self):
-        self.leftMotor.run(self.moveSpeed/2)
-        self.rightMotor.run(self.moveSpeed)
+        self.leftMotor.run(self.moveSpeed)
+        self.rightMotor.run(self.moveSpeed/3)
     
     def move_back(self):
         self.leftMotor.run(-self.moveSpeed)

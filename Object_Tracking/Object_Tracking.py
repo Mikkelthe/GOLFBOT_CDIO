@@ -1,270 +1,181 @@
 import cv2
 import numpy as np
-from pathlib import Path
-
-from settings.courtSettings import court_settings
-from .Course_detecter import find_arena
-from .Course_detecter import find_red_cross_center
-from .Course_detecter import find_red_cross_boxes
-from settings import courtSettings
-
-def detect_balls_by_hsv(warped_bgr, lower, upper, lower2=None, upper2=None, min_area=150, max_area=600, min_circularity=0.65):
-    hsv = cv2.cvtColor(warped_bgr, cv2.COLOR_BGR2HSV)
-    if lower2 is None:
-        mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
-    else:
-        mask = cv2.inRange(hsv, np.array(lower), np.array(upper)) | cv2.inRange(hsv, np.array(lower2), np.array(upper2))
-    mask = cv2.erode(mask, np.ones((5,5), np.uint8), iterations=1)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((5,5), np.uint8), iterations=1)
+from utils.conversion import Conversion
+from utils.point import Point
+from utils.settings.courtSettings import court_settings
+from .Course_detecter import CourseDetector
 
 
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+class ObjectTracker:
+    def __init__(self):
+        self.courseDetector = CourseDetector()
+        self.accumulatedObjects = []
+        self.accumulatedPriorityObjects = []
+        self.validObjects = list()
+        self.validPriorityObjects = list()
+        self.crossPosition = tuple()
+        self.accumulationIndex = 0
+        self.conversion = Conversion()
 
-    detections = []
-    ballcenter = []
-    for c in contours:
-        area = cv2.contourArea(c)
-        if area < min_area or area > max_area:
-            continue
 
-        perimeter = cv2.arcLength(c, True)
-        if perimeter == 0:
-            continue
+    def __detect_balls_by_hsv(self, warped_bgr, lower, upper, lower2=None, upper2=None, min_area=150, max_area=600, min_circularity=0.65):
+        hsv = cv2.cvtColor(warped_bgr, cv2.COLOR_BGR2HSV)
+        if lower2 is None:
+            mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
+        else:
+            mask = cv2.inRange(hsv, np.array(lower), np.array(upper)) | cv2.inRange(hsv, np.array(lower2), np.array(upper2))
+        mask = cv2.erode(mask, np.ones((5,5), np.uint8), iterations=1)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((5,5), np.uint8), iterations=1)
 
-        circularity = 4 * np.pi * area / (perimeter * perimeter)
-        if circularity < min_circularity:
-            continue
 
-        (x, y), r = cv2.minEnclosingCircle(c)
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        width = warped_bgr.shape[1]
-        height = warped_bgr.shape[0]
-        if x < 100 or x > width-100 or y < 100 or y > height-100:
-            continue
-        realx, realy = px_to_world_cm(x, y, warp_w_px=width, warp_h_px=height)
-        detections.append((float(realx), float(realy), int(x), int(y), int(r), float(area), float(circularity)))
-        ballcenter.append((float(realx), float(realy)))
+        detections = []
+        ballcenter = []
+        for c in contours:
+            area = cv2.contourArea(c)
+            if area < min_area or area > max_area:
+                continue
 
-    # Optional: sort biggest first (often helps stability)
-    detections.sort(key=lambda t: t[5], reverse=True)
+            perimeter = cv2.arcLength(c, True)
+            if perimeter == 0:
+                continue
 
-    return detections, mask, ballcenter
+            circularity = 4 * np.pi * area / (perimeter * perimeter)
+            if circularity < min_circularity:
+                continue
 
-#Coordinates
-def px_to_world_cm(
-    x_px,
-    y_px,
-    warp_w_px=court_settings.image_width,
-    warp_h_px=court_settings.image_height,
-    border_px=100,
-    court_w_cm=court_settings.court_width,
-    court_h_cm=court_settings.court_height
-):
-    court_w_px = warp_w_px - 2 * border_px
-    court_h_px = warp_h_px - 2 * border_px
+            (x, y), r = cv2.minEnclosingCircle(c)
 
-    # Convert image pixel coordinate to court-local pixel coordinate
-    x_local_px = x_px - border_px
-    y_local_px = y_px - border_px
+            width = warped_bgr.shape[1]
+            height = warped_bgr.shape[0]
+            if x < 90 or x > width-90 or y < 90 or y > height-90:
+                continue
+            realx, realy = self.conversion.px_to_world_cm(x, y, warp_w_px=width, warp_h_px=height)
+            detections.append((float(realx), float(realy), int(x), int(y), int(r), float(area), float(circularity)))
+            ballcenter.append((float(realx), float(realy)))
 
-    cm_per_px_x = court_w_cm / court_w_px
-    cm_per_px_y = court_h_cm / court_h_px
+        # Optional: sort biggest first (often helps stability)
+        detections.sort(key=lambda t: t[5], reverse=True)
 
-    x_cm = x_local_px * cm_per_px_x
+        return detections, mask, ballcenter
 
-    # y = 0 at bottom of court
-    y_cm_from_top = y_local_px * cm_per_px_y
-    y_cm = court_h_cm - y_cm_from_top
-
-    return x_cm, y_cm
-
-#Coordinates
-def world_cm_to_px(
-    x_cm,
-    y_cm,
-    img_w_px=court_settings.image_width,
-    img_h_px=court_settings.image_height,
-    border_px=100,
-    court_w_cm=court_settings.court_width,
-    court_h_cm=court_settings.court_height
-):
-    court_w_px = img_w_px - 2 * border_px
-    court_h_px = img_h_px - 2 * border_px
-
-    cm_per_px_x = court_w_cm / court_w_px
-    cm_per_px_y = court_h_cm / court_h_px
-
-    x_local_px = x_cm / cm_per_px_x
-
-    # y_cm is measured from bottom, but image y is measured from top
-    y_px_from_top_inside_court = (court_h_cm - y_cm) / cm_per_px_y
-
-    # Add the 50 px border back
-    x_px = x_local_px + border_px
-    y_px = y_px_from_top_inside_court + border_px
-
-    return int(round(x_px)), int(round(y_px))
-
-#Requires court to be uniform to work correctly
-def cm_to_px(
-    radius_cm,
-    warp_w_px=court_settings.image_width,
-    warp_h_px=court_settings.image_height,
-    border_px=100,
-    court_w_cm=court_settings.court_width,
-    court_h_cm=court_settings.court_height
-):
-    court_w_px = warp_w_px - 2 * border_px
-    cm_per_px_x = court_w_cm / court_w_px
-    return int(round(radius_cm / cm_per_px_x))
-
-def draw_detections_on_warp(
-    warped_bgr,
-    detections,
-    label_prefix,
-    warp_w_px, warp_h_px,
-    court_w_cm=125.0, court_h_cm=170.0,
-):
-    for i, (realx_cm, realy_cm, x_px, y_px, r_px, area, circ) in enumerate(detections):
-
-        # Draw circle + center
-        cv2.circle(warped_bgr, (x_px, y_px), r_px, (0, 255, 0), 2)   # outline
-        cv2.circle(warped_bgr, (x_px, y_px), 2, (0, 255, 0), -1)     # center dot
-
-        # Label
-        text = f"{label_prefix}{i}: ({realx_cm:.1f}cm, {realy_cm:.1f}cm)"
-        cv2.putText(
-            warped_bgr,
-            text,
-            (x_px + 10, y_px - 10),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.5,
-            (255, 255, 255),
-            2,
-            cv2.LINE_AA
+    @staticmethod
+    def find_bot(image):
+        aruco_dict = cv2.aruco.getPredefinedDictionary(
+            cv2.aruco.DICT_4X4_50
         )
 
-def draw_cross_on_warp(
-    img,
-    cross_data,
-    warp_w_px=court_settings.image_width,
-    warp_h_px=court_settings.image_height,
-    court_w_cm=court_settings.court_width,
-    court_h_cm=court_settings.court_height,
-    border_px=100
-):
-    if cross_data is None:
-        return img
-    if len(cross_data) != 3:
-        return img
+        detector = cv2.aruco.ArucoDetector(aruco_dict)
 
-    cv2.drawContours(img, [cross_data["vertical_box"]], 0, (0, 255, 0), 2)
-    cv2.drawContours(img, [cross_data["horizontal_box"]], 0, (255, 0, 0), 2)
+        corners, ids, rejected = detector.detectMarkers(image)
 
-    cx, cy = cross_data["center"]
-    cv2.circle(img, (cx, cy), 5, (0, 255, 255), -1)
+        if ids is not None:
+            pts = corners[0][0]
 
-    x_cm, y_cm = px_to_world_cm(
-        cx,
-        cy,
-        warp_w_px=warp_w_px,
-        warp_h_px=warp_h_px,
-        border_px=border_px,
-        court_w_cm=court_w_cm,
-        court_h_cm=court_h_cm
-    )
+            center = Point(*np.mean(pts, axis=0))
 
-    label = f"Cross: ({x_cm:.1f}cm, {y_cm:.1f}cm)"
-    cv2.putText(
-        img,
-        label,
-        (cx + 10, cy - 10),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.7,
-        (255, 255, 255),
-        2
-    )
+            # Marker top edge
+            top_left = pts[0]
+            top_right = pts[1]
 
-    return img
+            heading = top_right - top_left
+
+            angle = np.degrees(
+                np.arctan2(heading[1], heading[0])
+            )
+        else:
+            return None, None
+        return center, angle
+
+    def find_objects_in_image(self, img_bgr, w, h):
+        warped = self.courseDetector.find_arena(img_bgr)
+        if warped is None:
+            return None, None
+
+        dilated = cv2.dilate(warped, np.ones((1,1), np.uint8), iterations=1)
+        blurred = cv2.GaussianBlur(dilated, (7, 7), 0)
+        kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+        sharpened = cv2.filter2D(blurred, -1, kernel)
+
+        orange_balls, o_mask, o_center = self.__detect_balls_by_hsv(blurred, lower=(0, 5, 120), upper=(40, 255, 255))
+        unblurred_white_balls, ubw_mask, ubw_center = self.__detect_balls_by_hsv(warped, lower=(0, 0, 240), upper=(180, 110, 255), lower2=(0, 0, 0), upper2=(180, 100, 50))
+        white_balls, w_mask, w_center = self.__detect_balls_by_hsv(blurred, lower=(0, 0, 200), upper=(180, 110, 255))
+        shadowy_white_balls, sw, sw_center = self.__detect_balls_by_hsv(blurred, lower=(0, 0, 115), upper=(180, 100, 250))
         
-def find_objects_in_image(img_bgr,w,h):
-    warped = find_arena(img_bgr, w, h)
-    if warped is None:
-        return None, None
+        self.crossPosition = self.courseDetector.find_red_cross_boxes(warped)
 
-    dilated = cv2.dilate(warped, np.ones((1,1), np.uint8), iterations=1)
-    blurred = cv2.GaussianBlur(dilated, (7, 7), 0)
-    kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
-    sharpened = cv2.filter2D(blurred, -1, kernel)
+        if self.crossPosition is None:
+            print("i failed to find cross_center")
+        else:
+            print(len(self.crossPosition))
+            print(self.crossPosition)
 
-    orange_balls, omask, ocenter = detect_balls_by_hsv(blurred, lower=(0, 5, 120), upper=(40, 255, 255))
-    dark_orange_balls, domask, docenter = detect_balls_by_hsv(warped, lower=(0, 0, 240), upper=(180, 110, 255), lower2=(0, 0, 0), upper2=(180, 100, 50))
-    white_balls, wmask, wcenter = detect_balls_by_hsv(blurred, lower=(0, 0, 200), upper=(180, 110, 255))
-    shadowywhite_balls, sw, swcenter = detect_balls_by_hsv(blurred, lower=(0, 0, 115), upper=(180, 100, 250))
-    
-    cross_position = find_red_cross_boxes(warped)
+    # Two methods collapsed into one
+    # return orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, self.crossPosition, omask, domask, wmask, sw, wcenter, ocenter, swcenter, docenter
+    # def accumulate_valid_objects(self, wcenter, ocenter, swcenter, docenter):
 
-    if cross_position is None:
-        print("i failed to find cross_center")
-    else:
-        print(len(cross_position))
-        print(cross_position)
+        grouped_objects = w_center.copy()
+        grouped_objects += sw_center.copy()
+        grouped_objects += ubw_center.copy()
+        rounded_objects = list()
+        for (coord_x, coord_y) in grouped_objects:
+            rounded_objects.append((round(coord_x/4, 0)*4, round(coord_y/4, 0)*4))
+        for (coord_x, coord_y) in rounded_objects:
+            if rounded_objects.count((coord_x, coord_y)) > 1:
+                # debug reporting
+                # print(f"Removing {rounded_objects.count((coord_x,coord_y))-1} duplicate objects")
+                rounded_objects.remove((coord_x, coord_y))
 
-    return orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, omask, domask, wmask, sw, wcenter, ocenter, swcenter, docenter
+        grouped_priority_objects = o_center.copy()
+        rounded_priority_objects = list()
+        for (coord_x, coord_y) in grouped_priority_objects:
+            rounded_priority_objects.append((round(coord_x/4, 0)*4, round(coord_y/4, 0)*4))
+        for (coord_x, coord_y) in rounded_priority_objects:
+            if rounded_priority_objects.count((coord_x, coord_y)) > 1:
+                # debug reporting
+                # print(f"Removing {rounded_priority_objects.count((coord_x,coord_y))-1} duplicate vip objects")
+                rounded_priority_objects.remove((coord_x, coord_y))
 
-def group_valid_objects(wcenter, ocenter, swcenter, docenter):
-    valid_objects = wcenter.copy()
-    valid_objects += swcenter.copy()
-    valid_objects += docenter.copy()
-    rounded_objects = list()
-    for (coord_x, coord_y) in valid_objects:
-        rounded_objects.append((round(coord_x/4, 0)*4, round(coord_y/4, 0)*4))
-    for (coord_x, coord_y) in rounded_objects:
-        if rounded_objects.count((coord_x, coord_y)) > 1:
-            # print(f"Removing {rounded_objects.count((coord_x,coord_y))-1} duplicate objects")
-            rounded_objects.remove((coord_x, coord_y))
+        # debug reporting
+        # print(f"i found {rounded_objects}. That's {len(rounded_objects)} balls")
+        # print(f"i found {rounded_priority_objects}. That's {len(rounded_vip_objects)} super balls")
 
-    valid_vip_objects = ocenter.copy()
-    rounded_vip_objects = list()
-    for (coord_x, coord_y) in valid_vip_objects:
-        rounded_vip_objects.append((round(coord_x/4, 0)*4, round(coord_y/4, 0)*4))
-    for (coord_x, coord_y) in rounded_vip_objects:
-        if rounded_vip_objects.count((coord_x, coord_y)) > 1:
-            # print(f"Removing {rounded_vip_objects.count((coord_x,coord_y))-1} duplicate vip objects")
-            rounded_vip_objects.remove((coord_x, coord_y))
+        if len(self.accumulatedObjects) < 5:
+            self.accumulatedObjects.append(rounded_objects)
+        else:
+            self.accumulatedObjects[self.accumulationIndex % 5] = rounded_objects
 
-    print(f"i found {rounded_objects}. That's {len(rounded_objects)} balls")
-    # print(f"i found {rounded_vip_objects}. That's {len(rounded_vip_objects)} super balls")
-    return rounded_objects, rounded_vip_objects
+        if len(self.accumulatedPriorityObjects) < 5:
+            self.accumulatedPriorityObjects.append(rounded_priority_objects)
+        else:
+            self.accumulatedPriorityObjects[self.accumulationIndex % 5] = rounded_priority_objects
 
-def accumulate_valid_objects(accumulated_objects,accumulated_vip_objects,rounded_objects, rounded_vip_objects, index):
-    if index < 5:
-        accumulated_objects.append(rounded_objects)
-        accumulated_vip_objects.append(rounded_vip_objects)
-    else:
-        accumulated_objects[index%5] = rounded_objects
-        accumulated_vip_objects[index%5] = rounded_vip_objects
+        self.accumulationIndex += 1
+        self.accumulationIndex = self.accumulationIndex % 5
 
-    # converting arrays to lists
-    accumulated_objects_list = list()
-    accumulated_vip_objects_list = list()
-    for obj in accumulated_objects:
-        accumulated_objects_list += obj
-    for obj in accumulated_vip_objects:
-        accumulated_vip_objects_list += obj
+        # converting arrays to lists
+        accumulated_objects_list = list()
+        accumulated_priority_objects_list = list()
+        for obj in self.accumulatedObjects:
+            accumulated_objects_list += obj
+        for obj in self.accumulatedPriorityObjects:
+            accumulated_priority_objects_list += obj
 
-    # filtering persistent objects
-    real_objects_list = list()
-    real_vip_objects_list = list()
-    for (coord_x,coord_y) in accumulated_objects_list:
-        if (coord_x, coord_y) not in real_objects_list and accumulated_objects_list.count((coord_x,coord_y)) > 2:
-            real_objects_list.append((coord_x, coord_y))
+        # filtering persistent objects
+        self.validObjects = list()
+        self.validPriorityObjects = list()
+        for (coord_x,coord_y) in accumulated_objects_list:
+            if (coord_x, coord_y) not in self.validObjects and self.accumulatedObjects.count((coord_x,coord_y)) > 2:
+                coord_point = Point(coord_x, coord_y)
+                self.validObjects.append(coord_point)
 
-    for (coord_x, coord_y) in accumulated_vip_objects_list:
-        if (coord_x, coord_y) not in real_vip_objects_list and accumulated_vip_objects_list.count((coord_x,coord_y)) > 2:
-            real_vip_objects_list.append((coord_x, coord_y))
+        for (coord_x, coord_y) in accumulated_priority_objects_list:
+            if (coord_x, coord_y) not in self.validPriorityObjects and accumulated_priority_objects_list.count((coord_x,coord_y)) > 2:
+                coord_point = Point(coord_x, coord_y)
+                self.accumulatedPriorityObjects.append(coord_point)
 
-    print(f"{real_objects_list} FINAL LIST {len(real_objects_list)}")
-    print(f"{real_vip_objects_list} FINAL VIPS {len(real_vip_objects_list)}")
+        # print(f"{real_objects_list} FINAL LIST {len(real_objects_list)}")
+        # print(f"{real_vip_objects_list} FINAL VIPS {len(real_vip_objects_list)}")
 
-    return real_objects_list, real_vip_objects_list
+        return self.validObjects, self.validPriorityObjects, self.crossPosition

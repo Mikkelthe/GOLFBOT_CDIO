@@ -2,210 +2,94 @@ import math
 import cv2
 import numpy as np
 from pathlib import Path
-from point import *
+from utils.point import *
 from Object_Tracking.Object_Tracking import *
 from settings.courtSettings import court_settings
+from utils.conversion import *
+class Navigation:
+    def __init__(self):
+        self.converter = Conversion()
+        self.cd = CourseDetector()
+        self.ot = ObjectTracker()
+        self.warp_W = court_settings.image_width #picture width center in pixel
+        self.warp_H = court_settings.image_height #picture height center in pixel
+        self.buffer = court_settings.padding + 50 #distance in pixel between picture edge and the goal
+        self.court_W = court_settings.court_width #arena width in cm
+        self.court_H = court_settings.court_height #arena height in cm
+    
+    # find the relative vector from corner to bot
+    # project this vector onto optimal approach vector
+    # calculate nearest coordinate point on optimal approach
+    def find_optimal_corner_approach(self, cornerPosition: Point, botPosition: Point):
+    
+        b = Point(0,0)
+    
+        # top left corner
+        if cornerPosition.x < self.warp_W/3 and cornerPosition.y < self.warp_H/3:
+            b = Point(1,1)
+        # top right corner
+        elif cornerPosition.x > self.warp_W*2/3 and cornerPosition.y < self.warp_H/3:
+            b = Point(-1,1)
+        # bottom left corner
+        elif cornerPosition.x < self.warp_W/3 and cornerPosition.y > self.warp_H*2/3:
+            b = Point(1,-1)
+        # bottom right corner
+        elif cornerPosition.x < self.warp_W / 3 and cornerPosition.y > self.warp_H * 2 / 3:
+            b = Point(-1, -1)
+        else:
+            raise ValueError("Corner position correct")
+    
+    
+        relative_vector = Point(botPosition.x - cornerPosition.x,
+                                botPosition.y - cornerPosition.y)
+    
+        vector_factor = (relative_vector.x * b.x + relative_vector.y * b.y) / (b.x **2 + b.y **2)
+    
+        optimal_approach_vector = Point(b.x * vector_factor,
+                                        b.y * vector_factor)
+    
+        optimal_position = Point(optimal_approach_vector.x - cornerPosition.x, optimal_approach_vector.y - cornerPosition.y)
+    
+        return optimal_position
+    
+    #find distance between two points (for example: bot and ball)
+    def find_distance_between_points(self, point1: Point, point2: Point):
+        return np.sqrt(np.square(point2.x - point1.x) + np.square(point2.y - point1.y))
 
-#picture dimensions center in pixel
-WARP_W, WARP_H = court_settings.image_width, court_settings.image_height
-CENTER_POINT_WARP = Point(WARP_W / 2, WARP_H / 2)
-BUFFER = 150 # distance in pixel between picture edge and the goal
+    #find the best turn from current heading to a point
+    def drive_to_point(self, point:Point):
+        commands = []
+        return commands
+    
+    
+    #takes the bots position and heading and a destination point
+    #and finds if it is best to turn left or right and by how much
+    def find_turn(self, current_heading, point1, point2):
+        direction_radian = np.atan2(point2.y - point1.y, point2.x - point1.x)
+        target_direction = round(math.degrees(direction_radian))
+        delta_direction = target_direction - current_heading
 
-#actual dimensions and center in cm
-COURT_W_CM, COURT_H_CM = court_settings.court_width, court_settings.court_height
-CENTER_POINT_CM = Point(COURT_W_CM / 2, COURT_H_CM / 2)
+        # Normalize to [-180, 180]
+        delta = (delta_direction + 180) % 360 - 180
+        if delta > 0:
+            turn_flag = "right"
+            turn_angle = delta  # Degrees to turn
+        elif delta < 0:
+            turn_flag = "left"
+            turn_angle = -delta  # Absolute value for magnitude
+        else:
+            turn_flag = "none"
+            turn_angle = 0
 
-# find the relative vector from corner to bot
-# project this vector onto optimal approach vector
-# calculate nearest coordinate point on optimal approach
-def find_optimal_corner_approach(cornerPosition: Point, botPosition: Point):
+        return turn_flag, turn_angle
 
-    b = Point(0,0)
-
-    # top left corner
-    if cornerPosition.x < WARP_W/3 and cornerPosition.y < WARP_H/3:
-        b = Point(1,1)
-    # top right corner
-    elif cornerPosition.x > WARP_W*2/3 and cornerPosition.y < WARP_H/3:
-        b = Point(-1,1)
-    # bottom left corner
-    elif cornerPosition.x < WARP_W/3 and cornerPosition.y > WARP_H*2/3:
-        b = Point(1,-1)
-    # bottom right corner
-    elif cornerPosition.x < WARP_W / 3 and cornerPosition.y > WARP_H * 2 / 3:
-        b = Point(-1, -1)
-    else:
-        raise ValueError("Corner position correct")
-
-
-    relative_vector = Point(botPosition.x - cornerPosition.x,
-                            botPosition.y - cornerPosition.y)
-
-    vector_factor = (relative_vector.x * b.x + relative_vector.y * b.y) / (b.x **2 + b.y **2)
-
-    optimal_approach_vector = Point(b.x * vector_factor,
-                                    b.y * vector_factor)
-
-    optimal_position = Point(optimal_approach_vector.x - cornerPosition.x, optimal_approach_vector.y - cornerPosition.y)
-
-    return optimal_position
-
-#find distance between two points (for example: bot and ball)
-def find_distance_between_points(point1: Point, point2: Point):
-    return np.sqrt(np.square(point2.x - point1.x) + np.square(point2.y - point1.y))
-
-#find the best turn from current heading to a point
-def drive_to_point(point:Point):
-    commands = []
-    return commands
-
-#takes the bots position and heading and a destination point
-#and finds if it is best to turn left or right and by how much
-def find_turn(current_heading, point1, point2):
-    direction_radian = np.atan2(point2.y - point1.y, point2.x - point1.x)
-    target_direction = round(math.degrees(direction_radian))
-    delta_direction = target_direction - current_heading
-
-    # Normalize to [-180, 180]
-    delta = (delta_direction + 180) % 360 - 180
-    if delta > 0:
-        turn_flag = "right"
-        turn_angle = delta  # Degrees to turn
-    elif delta < 0:
-        turn_flag = "left"
-        turn_angle = -delta  # Absolute value for magnitude
-    else:
-        turn_flag = "none"
-        turn_angle = 0
-
-    return turn_flag, turn_angle
-
-#finds the optimal point to approach the goal (delivery point = 24 cm from goal)
-def find_goal_approach_point():
-    approach_point = Point(WARP_W - BUFFER, CENTER_POINT_WARP.y)
-    return approach_point
-
-#find the robot position and heading in the picture using an ArUco-marker
-def find_bot(image):
-    aruco_dict = cv2.aruco.getPredefinedDictionary(
-        cv2.aruco.DICT_4X4_50
-    )
-
-    detector = cv2.aruco.ArucoDetector(aruco_dict)
-
-    corners, ids, rejected = detector.detectMarkers(image)
-
-    if ids is not None:
-        pts = corners[0][0]
-
-        center = Point(*np.mean(pts, axis=0))
-
-        # Marker top edge
-        top_left = pts[0]
-        top_right = pts[1]
-
-        heading = top_right - top_left
-
-        angle = np.degrees(
-            np.arctan2(heading[1], heading[0])
-        )
-    else:
-        return None, None
-    return center, angle
-
-#find and set image folder/files
-base_path = Path(__file__).resolve().parent
-images_folder = base_path.parent / "Images"
-image_files = list(images_folder.glob("*.jpg"))
-
-#load image
-img = cv2.imread("arena.jpg")
-
-#find arena in img and draw on warped
-warped = find_arena(img, out_w=WARP_W, out_h=WARP_H)
-
-#finds all objects in img
-orange_ball, white_ball, dark_orange_balls, shadowywhite_balls, cross_position, a, b, c, d, e, f, g, h = (
-    find_objects_in_image(img, WARP_W, WARP_H))
-
-#heading measures from x-axis and goes counter-clockwise
-botCoordinates, currentHeading = find_bot(warped)
-
-#ball coordinates
-white_x = white_ball[0][0]
-white_y = white_ball[0][1]
-
-#convert from cm to pixel
-ballCoordinates = world_cm_to_px(white_x, white_y, WARP_W, WARP_H)
-
-# Calculate parallax distortion for bot
-cam_height_cm = 174.0
-bot_height_cm = 44.5
-
-# scale factor to convert marker-plane radius -> ground-plane radius
-scale = (cam_height_cm - bot_height_cm) / cam_height_cm  # = 1 / ratio_height
-
-# botCoordinates is a Point returned by find_bot(warped)
-# center is CENTER_POINT_WARP (Point)
-dx = botCoordinates.x - CENTER_POINT_WARP.x
-dy = botCoordinates.y - CENTER_POINT_WARP.y
-
-ground_dx = dx * scale
-ground_dy = dy * scale
-
-ground_x = int(round(CENTER_POINT_WARP.x + ground_dx))
-ground_y = int(round(CENTER_POINT_WARP.y + ground_dy))
-
-#Displace center to find true center from marker
-displacement_in_cm = 4.5
-displacement_in_px = cm_to_px(4.5)
-angle_in_radians = math.radians(currentHeading)
-ground_x = int(round(ground_x + displacement_in_px * math.cos(angle_in_radians)))
-ground_y = int(round(ground_y + displacement_in_px * math.sin(angle_in_radians)))
-
-# Update botCoordinates to the ground-projected pixel coordinates (use a Point if you prefer)
-botCoordinates = Point(ground_x, ground_y)
-bot_radius = cm_to_px(17.5, warp_w_px=WARP_W, warp_h_px=WARP_H)
-bot_circle = (botCoordinates, bot_radius)
-#draw bot on warped as circle(current bot radius is 16)
-warped = cv2.circle(warped, botCoordinates, bot_radius, (0, 0, 255), 3)
-
-
-#draw bot on warped as rectangle (width=23,5, length=34)
-width_in_px = cm_to_px(23.5)
-length_in_px = cm_to_px(34)
-rect = botCoordinates, (length_in_px, width_in_px), currentHeading
-bot_box = cv2.boxPoints(rect)
-bot_box = bot_box.astype(int)
-cv2.drawContours(warped, [bot_box], 0, (255, 0, 0), 3)
-
-#draw current heading from bot on warped
-arrow_length = 100 #px
-end_point = Point(
-    int(ground_x + arrow_length * np.cos(np.radians(currentHeading))),
-    int(ground_y + arrow_length * np.sin(np.radians(currentHeading)))
-)
-warped = cv2.arrowedLine(warped, botCoordinates, end_point, (0,0,255), 3)
-
-#draw arrow from center of bot to center of ball on warped
-warped = cv2.arrowedLine(warped, botCoordinates, ballCoordinates, (0,255,0), 3)
-
-#draw goal approach point
-warped = cv2.circle(warped, (find_goal_approach_point().x,find_goal_approach_point().y), 10, (0,0,255),-1)
-
-
-#resize and show window with picture: warped
-warped = cv2.resize(warped, (600, 400))
-cv2.imshow("Warped", warped)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
-
-#save picture: warped
-output_folder = ""
-output_path = output_folder + "visTest.jpg"
-cv2.imwrite(output_path, warped)
-
-
-#For testing with actual bot
-#MoveBot.MoveBot.turn(turnAngle, turnFlag)
-#MoveBot.MoveBot.move_forward(dist)
+    #finds the optimal point to approach the goal (delivery point = 24 cm from goal)
+    def find_goal_approach_point(self):
+        center = Point(self.warp_W / 2, self.warp_H / 2)
+        approach_point = Point(self.warp_W - self.buffer, center.y)
+        return approach_point
+    
+    
+    
+    
+    

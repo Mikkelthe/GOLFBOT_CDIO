@@ -1,10 +1,13 @@
 from typing import Callable
 
-from Object_Tracking.Course_detecter import find_arena,find_red_cross_boxes
+from Object_Tracking.Object_Tracking import ObjectTracker
+from Object_Tracking.Course_detecter import CourseDetector
 from golfbot import *
+from Navigation.Controller import Controller
 import numpy as np
-from ..Linalg.vector import Vector2
-from ..Linalg.matrix import Matrix22
+from utils.Linalg.vector import Vector2
+import cv2
+from Navigation.Navigation import find_bot
 
 
 # TODO: Use vectors and matricies
@@ -27,6 +30,11 @@ class Transform:
     @property
     def position(self):
         return self._position
+    
+    @position.setter
+    def position(self, vector: Vector2):
+        self._position = vector
+
     
     @property
     def forwardDirection(self):
@@ -53,18 +61,35 @@ class Transform:
 
 
 class GolfBotMemory:
-    def __init__(self,img):
+    def __init__(self, img):
         # TODO: Store more stuff in memory
         self.quadrant = 0
-        self.currentBall = []
+        self.currentBall: Vector2 = None
         self.whiteBalls = []
         self.orangeBalls = []
         self.storedBallCount = 0
-        self.transform = Transform()
+        self._transform = Transform()
         self.forwardDirection = [0, 1] # Direction
-        self.arena = find_arena(img,1500,1000)
+        self.objectTracker = ObjectTracker()
+        self.courseDetector = CourseDetector()
+
+        self.arena = self.courseDetector.find_arena(img)
         self.cross = 0
         self.goingToCornerLine = False
+
+        self.videoDevice = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+        self.videoDevice.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+        self.videoDevice.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+
+    @property
+    def transform(self):
+        return self._transform
+
+    def updateTransform(self):
+        _, img = self.videoDevice.read()
+        point, angle = find_bot(img)
+        self._transform.position = Vector2(point.x, point.y)
+        self._transform.rotation = math.radians(angle)
 
 
 class State:
@@ -72,7 +97,7 @@ class State:
         self.handler = None
         self.transitions = []
 
-    def setHandler(self, handler: Callable[[GolfBotMemory], None]):
+    def setHandler(self, handler: Callable[[Controller, GolfBotMemory], None]):
         self.handler = handler
 
     def addTransition(self, transition):
@@ -89,16 +114,17 @@ class Transition:
         self.conditionHandler = handler 
 
 class StateMachine:
-    def __init__(self, golfBot, startState: State):
+    def __init__(self, memory: GolfBotMemory, controller: Controller, startState: State):
         self.transitions = []
-        self.golfBot = golfBot
+        self.memory = memory
+        self.controller = controller
         self.currentState = startState
     
     def run(self):
         while self.currentState:
-            self.currentState.handler(self.golfBot)
-            currentStateTransitions = self.currentState.transitions
+            self.currentState.handler(self.controller, self.memory)
+            currentStateTransitions: list[Transition] = self.currentState.transitions
             for transition in currentStateTransitions:
-                if transition.conditionHandler(self.golfBot):
+                if transition.conditionHandler(self.memory):
                     self.currentState = transition.stateTo
                     break

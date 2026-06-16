@@ -1,35 +1,54 @@
 import keyboard
 from socket import *
 import time 
+import math
 
 HOST = '172.20.10.7'  # The server's hostname or IP address
 PORT = 6853  # The port used by the server
 
 def client_udp():
+    last_command = b"_"
     with socket(AF_INET, SOCK_DGRAM) as s:
         while True:
-            key = keyboard.read_key()
-            if keyboard.is_pressed('w'):
-                s.sendto(b'w', (HOST, PORT))
-            elif keyboard.is_pressed('s'):
-                s.sendto(b's', (HOST, PORT))
-            elif keyboard.is_pressed('w+a'):
-                s.sendto(b'wa', (HOST, PORT))
-            elif keyboard.is_pressed('w+d'):
-                s.sendto(b'wd', (HOST, PORT))
-            elif keyboard.is_pressed('a'):
-                s.sendto(b'a', (HOST, PORT))
-            elif keyboard.is_pressed('d'):
-                s.sendto(b'd', (HOST, PORT))
-            elif keyboard.is_pressed('o'):
-                s.sendto(b'o', (HOST, PORT))
+            x, y = 0,0
+            if keyboard.is_pressed("w"):
+                y += 1.0
+            if keyboard.is_pressed("s"):
+                y -= 1.0
+            if keyboard.is_pressed("a"):
+                x -= 1.0
+            if keyboard.is_pressed("d"):
+                x += 1.0
+            
+            if(x**2 + y**2 > 1):
+                magnitude = math.sqrt(x**2 + y**2)
+                x /= magnitude
+                y /= magnitude
+
+            if keyboard.is_pressed('space'):
+                x *= 2
+                y *= 2
+            
+            command = b"h"
+            
+            if keyboard.is_pressed('o'):
+                command = b"o"
             elif keyboard.is_pressed('p'):
-                s.sendto(b'p', (HOST, PORT))
+                command = b"p"
             elif keyboard.is_pressed('x'):
                 s.sendto(b'x', (HOST, PORT))
+                return
+            elif x == 0 and y == 0:
+                command = b"h"
             else:
-                s.sendto(b'h', (HOST, PORT))
-
+                command = f"[{x:.3f}, {y:.3f}]".encode("UTF-8")
+            if command != last_command: # Ensure that we stop the robot before executing the next command
+                s.sendto(b"h", (HOST, PORT))
+                time.sleep(0.02)
+            s.sendto(command, (HOST, PORT))
+            last_command = command
+            time.sleep(0.02)
+            
 def client_tcp():
     with socket(AF_INET, SOCK_STREAM) as s:
         print("Connecting...")

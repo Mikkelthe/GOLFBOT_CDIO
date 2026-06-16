@@ -1,7 +1,11 @@
-from Object_Tracking.Object_Tracking import *
+from Object_Tracking.Course_detecter import CourseDetector
+from Object_Tracking.Object_Tracking import ObjectTracker
 import time
 import cv2
+import numpy as np
 
+objectTracker = ObjectTracker()
+courseDetector = CourseDetector()
 run = True
 
 # ---- Court settings ----
@@ -29,43 +33,43 @@ while run:
 
 
     vis = frame.copy()
-    vis = find_arena(vis, WARP_W, WARP_H)
+    vis = courseDetector.find_arena(vis)
 
     dilated = cv2.dilate(vis, np.ones((3,3), np.uint8), iterations=1)
     blurred = cv2.GaussianBlur(vis, (5,5),0)
 
-    orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, omask, domask, wmask, sw, wcenter, ocenter, swcenter, docenter = find_objects_in_image(
+    orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, omask, domask, wmask, sw, wcenter, ocenter, swcenter, docenter = objectTracker.find_objects_in_image(
         frame, WARP_W, WARP_H)
-    rounded_objects, rounded_vip_objects = group_valid_objects(wcenter, ocenter, swcenter, docenter)
-    accumulate_valid_objects(accumulated_objects, accumulated_vip_objects, rounded_objects, rounded_vip_objects, j)
+    rounded_objects, rounded_vip_objects = objectTracker.group_valid_objects(wcenter, ocenter, swcenter, docenter)
+    objectTracker.accumulate_valid_objects(accumulated_objects, accumulated_vip_objects, rounded_objects, rounded_vip_objects, j)
     j += 1
     print(f"frame {j}")
 
-    draw_detections_on_warp(
+    objectTracker.draw_detections_on_warp(
         vis, orange_balls, "O",
         warp_w_px=WARP_W, warp_h_px=WARP_H,
         court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM,
     )
 
-    draw_detections_on_warp(
+    objectTracker.draw_detections_on_warp(
         vis, dark_orange_balls, "dO",
         warp_w_px=WARP_W, warp_h_px=WARP_H,
         court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM,
     )
 
-    draw_detections_on_warp(
+    objectTracker.draw_detections_on_warp(
         vis, shadowywhite_balls, "swO",
         warp_w_px=WARP_W, warp_h_px=WARP_H,
         court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM,
     )
 
-    draw_detections_on_warp(
+    objectTracker.draw_detections_on_warp(
         vis, white_balls, "W",
         warp_w_px=WARP_W, warp_h_px=WARP_H,
         court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM,
     )
 
-    draw_cross_on_warp(
+    objectTracker.draw_cross_on_warp(
         vis, cross_position,
         warp_w_px=WARP_W, warp_h_px=WARP_H,
         court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM,
