@@ -154,7 +154,7 @@ class ObjectTracker:
 
         return orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, omask, domask, wmask, sw, wcenter, ocenter, swcenter, docenter
 
-    def accumulate_objects(self, wcenter, ocenter, swcenter, docenter):
+    def accumulate_valid_objects(self, wcenter, ocenter, swcenter, docenter):
         grouped_objects = wcenter.copy()
         grouped_objects += swcenter.copy()
         grouped_objects += docenter.copy()
@@ -163,6 +163,7 @@ class ObjectTracker:
             rounded_objects.append((round(coord_x/4, 0)*4, round(coord_y/4, 0)*4))
         for (coord_x, coord_y) in rounded_objects:
             if rounded_objects.count((coord_x, coord_y)) > 1:
+                # debug reporting
                 # print(f"Removing {rounded_objects.count((coord_x,coord_y))-1} duplicate objects")
                 rounded_objects.remove((coord_x, coord_y))
 
@@ -172,9 +173,11 @@ class ObjectTracker:
             rounded_priority_objects.append((round(coord_x/4, 0)*4, round(coord_y/4, 0)*4))
         for (coord_x, coord_y) in rounded_priority_objects:
             if rounded_priority_objects.count((coord_x, coord_y)) > 1:
+                # debug reporting
                 # print(f"Removing {rounded_priority_objects.count((coord_x,coord_y))-1} duplicate vip objects")
                 rounded_priority_objects.remove((coord_x, coord_y))
 
+        # debug reporting
         # print(f"i found {rounded_objects}. That's {len(rounded_objects)} balls")
         # print(f"i found {rounded_priority_objects}. That's {len(rounded_vip_objects)} super balls")
 
@@ -200,8 +203,8 @@ class ObjectTracker:
             accumulated_priority_objects_list += obj
 
         # filtering persistent objects
-        real_objects_list = list()
-        real_vip_objects_list = list()
+        self.validObjects = list()
+        self.validPriorityObjects = list()
         for (coord_x,coord_y) in accumulated_objects_list:
             if (coord_x, coord_y) not in self.validObjects and self.accumulatedObjects.count((coord_x,coord_y)) > 2:
                 self.validObjects.append((coord_x, coord_y))
