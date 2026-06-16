@@ -1,0 +1,146 @@
+{
+    "startState": "detectBallsState",
+    "states": {
+        "detectBallsState": {
+            "handler": "detectBallsStateHandler"
+        },
+        "collectOrangeState": {
+            "handler": "approachPointStateHandler"
+        },
+        "checkQuadrantState": {
+            "handler": "checkQuadrantStateHandler"
+        },
+        "approachNarrowGoalState": {
+            "handler": "approachPointStateHandler"
+        },
+        "approachOrangeBallInCornerState": {
+            "handler": "approachCoordinateInCornerStateHandler"
+        },
+        "approachNewQuadrantState": {
+            "handler": "approachNewQuadrantStateHandler"
+        },
+        "avoidObstacleState": {
+            "handler": "avoidObstacleStateHandler"
+        },
+        "submitBallsState": {
+            "handler": "submitBallsStateHandler"
+        },
+        "findNearestBallState": {
+            "handler": "findNearestStateHandler"
+        },
+        "approachCoordinateInCornerState": {
+            "handler": "approachCoordinateInCornerStateHandler"
+        },
+        "approachWhiteBallCoordinateState": {
+            "handler": "approachPointStateHandler"
+        },
+        "readjustState": {
+            "handler": "readjustStateHandler"
+        }
+    },
+    "stateTransitions": {
+        "detectBallsState": [
+            {
+                "handler": "orangeDetectedTransitionHandler",
+                "nextState": "collectOrangeState" 
+            },
+            {
+                "handler": "whiteDetectedTransitionHandler",
+                "nextState": "checkQuadrantState"
+            },
+            {
+                "handler": "noneDetectedTransitionHandler",
+                "nextState": "approachNarrowGoalState"
+            }
+        ],
+        "collectOrangeState": [
+            {
+                "handler": "orangeCollectedTransitionHandler",
+                "nextState": "detectBallsState"
+            },
+            {
+                "handler": "orangeInCornerTransitionHandler",
+                "nextState": "approachOrangeBallInCornerState"
+            }
+        ],
+        "checkQuadrantState": [
+            {
+                "handler": "whiteNotInQuadrantTransitionHandler",
+                "nextState": "approachNewQuadrantState"
+            },
+            {
+                "handler": "whiteInQuadrantTransitionHandler",
+                "nextState": "findNearestBallState"
+            }
+        ],
+        "approachNarrowGoalState": [
+            {
+                "handler": "obstacleInPathTransitionHandler",
+                "nextState": "avoidObstacleState"
+            },
+            {
+                "handler": "reachedGoalTransitionHandler",
+                "nextState": "submitBallsState"
+            }
+        ],
+        "approachOrangeBallInCornerState": [
+            {
+                "handler": "orangeCollectedTransitionHandler",
+                "nextState": "detectBallsState"
+            },
+            {
+                "handler": "failedToCollectOrangeTransitionHandler",
+                "nextState": "collectOrangeState"
+            }
+        ],
+        "approachNewQuadrantState": [
+            {
+                "handler": "inNewQuadrantTransitionHandler",
+                "nextState": "detectBallsState"
+            }
+        ],
+        "avoidObstacleState": [
+            {
+                "handler": "obstacleAvoidedTransitionHandler",
+                "nextState": "approachNarrowGoalState"
+            }
+        ],
+        "submitBallsState": [],
+        "findNearestBallState": [
+            {
+                "handler": "nearestBallInCornerTransitionHandler",
+                "nextState": "approachCoordinateInCornerState"
+            },
+            {
+                "handler": "nearestBallNotInCornerTransitionHandler",
+                "nextState": "approachWhiteBallCoordinateState"
+            }
+        ],
+        "approachCoordinateInCornerState": [
+            {
+                "handler": "ballCollectedTransitionHandler",
+                "nextState": "checkQuadrantState"
+            },
+            {
+                "handler": "failedToCollectBallTransitionHandler",
+                "nextState": "readjustState"
+            }
+        ],
+        "approachWhiteBallCoordinateState": [
+            {
+                "handler": "ballCollectedTransitionHandler",
+                "nextState": "checkQuadrantState"
+            },
+            {
+                "handler": "failedToCollectBallTransitionHandler",
+                "nextState": "readjustState"
+            }
+        ],
+        "readjustState": [
+            {
+                "handler": "doneReadjustingTransitionHandler",
+                "nextState": "findNearestBallState"
+            }
+        ]
+    }
+}

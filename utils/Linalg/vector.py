@@ -1,10 +1,10 @@
 import numpy as np
-from numpy.typing import ArrayLike
+from collections.abc import Sequence
 from typing import Self
 
 
-class Vector2(ArrayLike):
-    def __init__(self, arr: ArrayLike):
+class Vector2(Sequence[float]):
+    def __init__(self, arr: Sequence[float]):
         if(len(arr) != 2):
             raise ValueError("Length of array must be 2")
         
@@ -13,13 +13,13 @@ class Vector2(ArrayLike):
     def __init__(self, x: float, y: float):
         self._arr = np.array([x, y])
 
-    def __add__(self, other: ArrayLike) -> Self:
+    def __add__(self, other: Sequence[float]) -> Self:
         if len(other) != 2:
             raise ValueError("Length of array must be 2")
         
         return Vector2(np.add(self, other))
     
-    def __sub__(self, other: ArrayLike) -> Self:
+    def __sub__(self, other: Sequence[float]) -> Self:
         if len(other) != 2:
             raise ValueError("Length of array must be 2")
 
@@ -58,7 +58,7 @@ class Vector2(ArrayLike):
                    [-np.sin(angle), np.cos(angle)]]) @ self._arr
 
     @staticmethod
-    def dot(a: ArrayLike, b: ArrayLike) -> float:
+    def dot(a: Sequence[float], b: Sequence[float]) -> float:
         """
         Calculates the dot product between vectors a and b
 
@@ -75,7 +75,7 @@ class Vector2(ArrayLike):
         return a @ b
 
     @staticmethod
-    def project(a: ArrayLike, b: ArrayLike) -> Self:
+    def project(a: Sequence[float], b: Sequence[float]) -> Self:
         """
         Projects the vector a onto b
 
@@ -93,7 +93,7 @@ class Vector2(ArrayLike):
         return Vector2(b[0]*dotProd, b[1]*dotProd)
 
     @staticmethod
-    def unsignedAngle(a: ArrayLike, b: ArrayLike) -> float:
+    def unsignedAngle(a: Sequence[float], b: Sequence[float]) -> float:
         """
         Calculates the unsigned angle between 2 vectors in radians
 
@@ -112,7 +112,7 @@ class Vector2(ArrayLike):
         np.arccos(Vector2.dot(vecA, vecB)/(vecA.magnitude*vecB.magnitude))
         
     @staticmethod
-    def signedAngle(a: ArrayLike, b: ArrayLike) -> float:
+    def signedAngle(a: Sequence[float], b: Sequence[float]) -> float:
         """
         Calculates the signed angle between 2 vectors in radians
 

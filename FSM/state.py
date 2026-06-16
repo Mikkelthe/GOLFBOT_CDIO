@@ -2,10 +2,10 @@ from typing import Callable
 
 from Object_Tracking.Object_Tracking import ObjectTracker
 from Object_Tracking.Course_detecter import CourseDetector
-from golfbot import *
 from Navigation.Controller import Controller
 import numpy as np
 from utils.Linalg.vector import Vector2
+import math
 import cv2
 from Navigation.Navigation import find_bot
 
@@ -102,11 +102,12 @@ class State:
 
     def addTransition(self, transition):
         self.transitions.append(transition)
-        self.transitions.stateFrom = self
+        transition.stateFrom = self
     
 class Transition:
+    stateFrom: State
     def __init__(self, stateFrom: State, stateTo: State):
-        self.stateFrom = stateFrom
+        stateFrom.addTransition(self)
         self.stateTo = stateTo
         self.conditionHandler = None
     
@@ -115,7 +116,6 @@ class Transition:
 
 class StateMachine:
     def __init__(self, memory: GolfBotMemory, controller: Controller, startState: State):
-        self.transitions = []
         self.memory = memory
         self.controller = controller
         self.currentState = startState
