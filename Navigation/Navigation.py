@@ -89,34 +89,6 @@ class Navigation:
         approach_point = Point(self.warp_W - self.buffer, center.y)
         return approach_point
     
-    #find the robot position and heading in the picture using an ArUco-marker
-    def find_bot(self, image):
-        aruco_dict = cv2.aruco.getPredefinedDictionary(
-            cv2.aruco.DICT_4X4_50
-        )
-    
-        detector = cv2.aruco.ArucoDetector(aruco_dict)
-    
-        corners, ids, rejected = detector.detectMarkers(image)
-    
-        if ids is not None:
-            pts = corners[0][0]
-    
-            center = Point(*np.mean(pts, axis=0))
-    
-            # Marker top edge
-            top_left = pts[0]
-            top_right = pts[1]
-    
-            heading = top_right - top_left
-    
-            angle = np.degrees(
-                np.arctan2(heading[1], heading[0])
-            )
-        else:
-            return None, None
-        return center, angle
-    
     
     
     

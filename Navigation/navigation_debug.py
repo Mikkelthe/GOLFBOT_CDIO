@@ -4,8 +4,10 @@ import cv2
 import numpy as np
 from Navigation import Navigation
 from point import Point
+from Object_Tracking.Object_Tracking import ObjectTracker
 
 nav = Navigation()
+tracker = ObjectTracker()
 
 # find and set image folder/files
 base_path = Path(__file__).resolve().parent
@@ -23,7 +25,7 @@ orange_ball, white_ball, dark_orange_balls, shadowywhite_balls, cross_position, 
     nav.ot.find_objects_in_image(img, nav.warp_W, nav.warp_H))
 
 # heading measures from x-axis and goes counter-clockwise
-botCoordinates, currentHeading = nav.find_bot(warped)
+botCoordinates, currentHeading = tracker.find_bot(warped)
 
 # ball coordinates
 white_x = white_ball[0][0]
