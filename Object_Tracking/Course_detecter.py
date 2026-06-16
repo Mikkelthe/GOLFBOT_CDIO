@@ -3,8 +3,11 @@ import numpy as np
 from matplotlib.image import imsave
 
 class CourseDetector:
+    def __init__(self):
+        self.padding = 100
 
-    def hsv_mask_red(self, hsv):
+    @staticmethod
+    def __hsv_mask_red(hsv):
         # red wraps hue -> two ranges
         lower1 = np.array([0, 20, 30])
         upper1 = np.array([30, 255, 255])
@@ -12,7 +15,8 @@ class CourseDetector:
         upper2 = np.array([180, 255, 255])
         return cv2.inRange(hsv, lower1, upper1) | cv2.inRange(hsv, lower2, upper2)
 
-    def line_intersection(self, l1, l2):
+    @staticmethod
+    def __line_intersection(l1, l2):
         # lines in ax + by + c = 0 form
         a1, b1, c1 = l1
         a2, b2, c2 = l2
@@ -22,17 +26,17 @@ class CourseDetector:
         x = (b1*c2 - b2*c1) / d
         y = (c1*a2 - c2*a1) / d
         return np.array([x, y], dtype=np.float32)
-
-    def normalize_line_from_rho_theta(self, rho, theta):
+    @staticmethod
+    def __normalize_line_from_rho_theta(rho, theta):
         # Hough gives rho,theta for x*cos + y*sin = rho
         a = np.cos(theta)
         b = np.sin(theta)
         # => a*x + b*y - rho = 0
         return np.array([a, b, -rho], dtype=np.float32)
 
-    def find_box_corners_by_hough(self, img_bgr):
+    def __find_box_corners_by_hough(self, img_bgr):
         hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
-        red = self.hsv_mask_red(hsv)
+        red = self.__hsv_mask_red(hsv)
         debug = red.copy()
         cv2.imwrite("debug_red.png", debug)
         
@@ -102,26 +106,26 @@ class CourseDetector:
         bottom = hys[-1][1], hys[-1][2]
 
         # convert to ax + by + c = 0
-        L = self.normalize_line_from_rho_theta(*left)
-        R = self.normalize_line_from_rho_theta(*right)
-        T = self.normalize_line_from_rho_theta(*top)
-        B = self.normalize_line_from_rho_theta(*bottom)
+        L = self.__normalize_line_from_rho_theta(*left)
+        R = self.__normalize_line_from_rho_theta(*right)
+        T = self.__normalize_line_from_rho_theta(*top)
+        B = self.__normalize_line_from_rho_theta(*bottom)
 
         # intersections: TL, TR, BR, BL
-        tl = self.line_intersection(T, L)
-        tr = self.line_intersection(T, R)
-        br = self.line_intersection(B, R)
-        bl = self.line_intersection(B, L)
+        tl = self.__line_intersection(T, L)
+        tr = self.__line_intersection(T, R)
+        br = self.__line_intersection(B, R)
+        bl = self.__line_intersection(B, L)
         # padding the corners, to get a bit outside the arena aswell
-        padding = 100
-        tr[0] += padding
-        tr[1] += -padding
-        tl[0] += -padding
-        tl[1] += -padding
-        br[0] += padding
-        br[1] += padding
-        bl[0] += -padding
-        bl[1] += padding
+
+        tr[0] += self.padding
+        tr[1] += -self.padding
+        tl[0] += -self.padding
+        tl[1] += -self.padding
+        br[0] += self.padding
+        br[1] += self.padding
+        bl[0] += -self.padding
+        bl[1] += self.padding
         if any(p is None for p in [tl, tr, br, bl]):
             return None
 
@@ -133,18 +137,7 @@ class CourseDetector:
 
         return corners
 
-
-    def touches_border(self, contour, img_w, img_h, margin=5):
-        x, y, w, h = cv2.boundingRect(contour)
-        return (
-            x <= margin or
-            y <= margin or
-            x + w >= img_w - margin or
-            y + h >= img_h - margin
-        )
-
-
-    def find_red_cross_contour(self, img_bgr):
+    def __find_red_cross_contour(self, img_bgr):
         img_h, img_w = img_bgr.shape[:2]
 
         # Middle search area size
@@ -219,7 +212,7 @@ class CourseDetector:
         return cross_contour, full_mask
 
     def find_red_cross_boxes(self, img_bgr):
-        cross_contour, cross_mask = self.find_red_cross_contour(img_bgr)
+        cross_contour, cross_mask = self.__find_red_cross_contour(img_bgr)
         if cross_contour is None:
             cv2.imwrite("debug_cross_mask.png", cross_mask)
             return None
@@ -383,121 +376,11 @@ class CourseDetector:
             "horizontal_box": boxes[1],
             "center": center,
         }
-        
-    def find_red_cross_center(self, img_bgr):
-        cross_contour, _ = self.find_red_cross_contour(img_bgr)
-        if cross_contour is None:
-            return None
-
-        M = cv2.moments(cross_contour)
-        if M["m00"] == 0:
-            return None
-
-        x = int(M["m10"] / M["m00"])
-        y = int(M["m01"] / M["m00"])
-        return (x, y)
-    """
-    def find_red_cross_center(img_bgr):
-        hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
-        red_mask = hsv_mask_red(hsv)
-
-        kernel = np.ones((5, 5), np.uint8)
-        red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_OPEN, kernel, iterations=1)
-
-        contours, _ = cv2.findContours(red_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        if not contours:
-            return None
-
-        
-        contours = sorted(contours, key=cv2.contourArea, reverse=True)
-
-        if len(contours) < 2:
-            return None
-
-        cross_contour = contours[1]
-
-        M = cv2.moments(cross_contour)
-        if M["m00"] == 0:
-            return None
-
-        x = int(M["m10"] / M["m00"])
-        y = int(M["m01"] / M["m00"])
-
-        return (x, y)
-        hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
-        red_mask = hsv_mask_red(hsv)
-
-        kernel = np.ones((5, 5), np.uint8)
-        red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_OPEN, kernel, iterations=1)
-        red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_CLOSE, kernel, iterations=1)
-
-        contours, _ = cv2.findContours(red_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        if not contours:
-            return None
-
-        # Largest red contour is usually the border, second largest should be the cross
-        contours = sorted(contours, key=cv2.contourArea, reverse=True)
-        if len(contours) < 2:
-            return None
-
-        cross_contour = contours[1]
-
-        # Bounding box around the whole cross area
-        x, y, w, h = cv2.boundingRect(cross_contour)
-
-        # Crop mask to only cross area
-        roi = red_mask[y:y+h, x:x+w]
-
-        # Connected pixels of the cross
-        ys, xs = np.where(roi > 0)
-        if len(xs) == 0:
-            return None
-
-        # Estimate center of cross within ROI
-        cx = int(np.mean(xs))
-        cy = int(np.mean(ys))
-
-        # Split into vertical and horizontal parts using bands around center
-        band = max(8, min(w, h) // 6)
-
-        vertical_mask = np.zeros_like(roi)
-        horizontal_mask = np.zeros_like(roi)
-
-        vertical_mask[:, max(0, cx - band):min(roi.shape[1], cx + band)] = roi[:, max(0, cx - band):min(roi.shape[1], cx + band)]
-        horizontal_mask[max(0, cy - band):min(roi.shape[0], cy + band), :] = roi[max(0, cy - band):min(roi.shape[0], cy + band), :]
-
-        # Find contour for vertical bar
-        v_contours, _ = cv2.findContours(vertical_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        h_contours, _ = cv2.findContours(horizontal_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        if not v_contours or not h_contours:
-            return None
-
-        v_contour = max(v_contours, key=cv2.contourArea)
-        h_contour = max(h_contours, key=cv2.contourArea)
-
-        # Shift contours back into full-image coordinates
-        v_contour = v_contour + np.array([[[x, y]]], dtype=np.int32)
-        h_contour = h_contour + np.array([[[x, y]]], dtype=np.int32)
-
-        # Rotated rectangles
-        v_rect = cv2.minAreaRect(v_contour)
-        h_rect = cv2.minAreaRect(h_contour)
-
-        v_box = cv2.boxPoints(v_rect).astype(int)
-        h_box = cv2.boxPoints(h_rect).astype(int)
-
-        return {
-            "vertical_box": v_box,
-            "horizontal_box": h_box,
-            "center": (x + cx, y + cy)
-        }
-    """
 
     def find_arena(self, img, out_w, out_h):
         # corners must be TL,TR,BR,BL float32
         dst = np.array([[0,0],[out_w,0],[out_w,out_h],[0,out_h]], dtype=np.float32)
-        corners = self.find_box_corners_by_hough(img)
+        corners = self.__find_box_corners_by_hough(img)
 
         if corners[0] is None:
             return img
