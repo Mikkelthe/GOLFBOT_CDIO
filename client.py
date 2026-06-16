@@ -10,7 +10,6 @@ def client_udp():
     last_command = b"_"
     with socket(AF_INET, SOCK_DGRAM) as s:
         while True:
-            #key = keyboard.read_key()
             x, y = 0,0
             if keyboard.is_pressed("w"):
                 y += 1.0
@@ -33,7 +32,7 @@ def client_udp():
             command = b"h"
             
             if keyboard.is_pressed('o'):
-                command = b""
+                command = b"o"
             elif keyboard.is_pressed('p'):
                 command = b"p"
             elif keyboard.is_pressed('x'):
