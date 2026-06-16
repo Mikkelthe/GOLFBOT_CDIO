@@ -1,10 +1,4 @@
-"""Shared navigation geometry and tuning constants.
 
-Keep this module free of Point/dataclass imports so planning, detection, and
-demo code can all depend on it without circular imports.
-"""
-
-# Confirmed by Object_Tracking.Object_Tracking coordinate conversion.
 FIELD_WIDTH_CM = 170.0
 FIELD_HEIGHT_CM = 125.0
 
@@ -30,16 +24,16 @@ SAFE_PICKUP_MARGIN_CM = 3.0
 WALL_PICKUP_MARGIN_CM = 2.0
 PICKUP_APPROACH_DISTANCE_CM = PICKUP_OFFSET_CM
 
-# Robot dimensions are conservative planning values. Navigation.py previously
-# drew the robot with a 16 cm radius, so 32 cm is a reasonable starting width.
-ROBOT_BODY_WIDTH_CM = 32.0
-ROBOT_BODY_LENGTH_CM = 32.0
+# Robot dimensions mirror the values used by Navigation/Navigation.py's robot drawing.
+ROBOT_RADIUS_CM = 17.5
+ROBOT_BODY_WIDTH_CM = 23.5
+ROBOT_BODY_LENGTH_CM = 34.0
 ROBOT_CLEARANCE_CM = 3.0
 
-# Measured in Navigation/Navigation.py. Do not import that module because it
-# runs image/camera/debug code at import time.
-CAMERA_HEIGHT_CM = 195.0
-ROBOT_MARKER_HEIGHT_CM = 46.0
+# Measured in Navigation/Navigation.py's parallax demo.
+CAMERA_HEIGHT_CM = 174.0
+ROBOT_MARKER_HEIGHT_CM = 44.5
+MARKER_TO_ROBOT_CENTER_OFFSET_CM = 4.5
 APPLY_MARKER_PARALLAX_CORRECTION = True
 
 # Current robot_logic ArUco heading calibration.

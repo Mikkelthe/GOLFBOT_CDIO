@@ -5,6 +5,10 @@ from Object_Tracking.Object_Tracking import find_objects_in_image, px_to_world_c
 from Navigation.Navigation import find_bot, find_optimal_corner_approach, drive_to_point
 from Navigation.point import Point
 from settings.courtSettings import court_settings
+from Navigation.Controller import *
+from robot_logic.route_planning.pathfinder import *
+
+
 # States
 def detectStateHandler(golfBot: GolfBotMemory):
     #ToDo: Change the find_objects_in_image, to persistant ball finder
@@ -17,10 +21,11 @@ def detectStateHandler(golfBot: GolfBotMemory):
     golfBot.arena = find_arena(img,warp_w,warp_h)
     return None
 
-def collectOrangeStateHandler(golfBot: GolfBotMemory):
+def collectOrangeStateHandler(golfBot: GolfBotMemory, controller: Controller):
     golfBot.currentBall = golfBot.orangeBalls[0]
     #ToDo: Use algorithm on currentball position to move to it
-    return None
+
+    controller.move("w")
 
 def checkQuadrantStateHandler(golfBot: GolfBotMemory):
     return None
