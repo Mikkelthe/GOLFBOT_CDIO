@@ -1,12 +1,12 @@
 import time
 from time import sleep
-
-from .Object_Tracking import ObjectTracker
-from .Course_detecter import CourseDetector
+from Drawer import *
+from Object_Tracking.Object_Tracking import ObjectTracker
+from Object_Tracking.Course_detecter import CourseDetector
 import cv2
 import numpy as np
 from pathlib import Path
-from settings.courtSettings import court_settings
+from utils.settings.courtSettings import court_settings
 
 
 if __name__ == "__main__":
@@ -116,27 +116,27 @@ if __name__ == "__main__":
         cross_position = courseDetector.find_red_cross_boxes(warped)
 
         vis = blurred.copy()
-        objectTracker.draw_detections_on_warp(
+        draw_detections_on_warp(
             vis, orange_balls, "O",
             warp_w_px=WARP_W, warp_h_px=WARP_H,
             court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM,
         )
-        objectTracker.draw_detections_on_warp(
+        draw_detections_on_warp(
             vis, dark_orange_balls, "dO",
             warp_w_px=WARP_W, warp_h_px=WARP_H,
             court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM,
         )
-        objectTracker.draw_detections_on_warp(
+        draw_detections_on_warp(
             vis, shadowywhite_balls, "swO",
             warp_w_px=WARP_W, warp_h_px=WARP_H,
             court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM,
         )
-        objectTracker.draw_detections_on_warp(
+        draw_detections_on_warp(
             vis, white_balls, "W",
             warp_w_px=WARP_W, warp_h_px=WARP_H,
             court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM,
         )
-        objectTracker.draw_cross_on_warp(
+        draw_cross_on_warp(
             vis, cross_position,
             warp_w_px=WARP_W, warp_h_px=WARP_H,
             court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM,

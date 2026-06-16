@@ -1,10 +1,10 @@
 import cv2
 import numpy as np
-from pathlib import Path
-
-from settings.courtSettings import court_settings
+from utils.conversion import Conversion
+from utils.point import Point
+from utils.settings.courtSettings import court_settings
 from .Course_detecter import CourseDetector
-from settings import courtSettings
+
 
 class ObjectTracker:
     def __init__(self):
@@ -14,9 +14,10 @@ class ObjectTracker:
         self.validObjects = list()
         self.validPriorityObjects = list()
         self.accumulationIndex = 0
+        self.conversion = Conversion()
 
 
-    def detect_balls_by_hsv(self, warped_bgr, lower, upper, lower2=None, upper2=None, min_area=150, max_area=600, min_circularity=0.65):
+    def __detect_balls_by_hsv(self, warped_bgr, lower, upper, lower2=None, upper2=None, min_area=150, max_area=600, min_circularity=0.65):
         hsv = cv2.cvtColor(warped_bgr, cv2.COLOR_BGR2HSV)
         if lower2 is None:
             mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
@@ -49,7 +50,7 @@ class ObjectTracker:
             height = warped_bgr.shape[0]
             if x < 100 or x > width-100 or y < 100 or y > height-100:
                 continue
-            realx, realy = self.px_to_world_cm(x, y, warp_w_px=width, warp_h_px=height)
+            realx, realy = self.conversion.px_to_world_cm(x, y, warp_w_px=width, warp_h_px=height)
             detections.append((float(realx), float(realy), int(x), int(y), int(r), float(area), float(circularity)))
             ballcenter.append((float(realx), float(realy)))
 
@@ -58,77 +59,34 @@ class ObjectTracker:
 
         return detections, mask, ballcenter
 
-    def draw_detections_on_warp(
-        self,
-        warped_bgr,
-        detections,
-        label_prefix,
-        warp_w_px, warp_h_px,
-        court_w_cm=125.0, court_h_cm=170.0,
-    ):
-        for i, (realx_cm, realy_cm, x_px, y_px, r_px, area, circ) in enumerate(detections):
+    @staticmethod
+    def find_bot(image):
+        aruco_dict = cv2.aruco.getPredefinedDictionary(
+            cv2.aruco.DICT_4X4_50
+        )
 
-            # Draw circle + center
-            cv2.circle(warped_bgr, (x_px, y_px), r_px, (0, 255, 0), 2)   # outline
-            cv2.circle(warped_bgr, (x_px, y_px), 2, (0, 255, 0), -1)     # center dot
+        detector = cv2.aruco.ArucoDetector(aruco_dict)
 
-            # Label
-            text = f"{label_prefix}{i}: ({realx_cm:.1f}cm, {realy_cm:.1f}cm)"
-            cv2.putText(
-                warped_bgr,
-                text,
-                (x_px + 10, y_px - 10),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (255, 255, 255),
-                2,
-                cv2.LINE_AA
+        corners, ids, rejected = detector.detectMarkers(image)
+
+        if ids is not None:
+            pts = corners[0][0]
+
+            center = Point(*np.mean(pts, axis=0))
+
+            # Marker top edge
+            top_left = pts[0]
+            top_right = pts[1]
+
+            heading = top_right - top_left
+
+            angle = np.degrees(
+                np.arctan2(heading[1], heading[0])
             )
+        else:
+            return None, None
+        return center, angle
 
-    def draw_cross_on_warp(
-        self,
-        img,
-        cross_data,
-        warp_w_px=court_settings.image_width,
-        warp_h_px=court_settings.image_height,
-        court_w_cm=court_settings.court_width,
-        court_h_cm=court_settings.court_height,
-        border_px=100
-    ):
-        if cross_data is None:
-            return img
-        if len(cross_data) != 3:
-            return img
-
-        cv2.drawContours(img, [cross_data["vertical_box"]], 0, (0, 255, 0), 2)
-        cv2.drawContours(img, [cross_data["horizontal_box"]], 0, (255, 0, 0), 2)
-
-        cx, cy = cross_data["center"]
-        cv2.circle(img, (cx, cy), 5, (0, 255, 255), -1)
-
-        x_cm, y_cm = self.px_to_world_cm(
-            cx,
-            cy,
-            warp_w_px=warp_w_px,
-            warp_h_px=warp_h_px,
-            border_px=border_px,
-            court_w_cm=court_w_cm,
-            court_h_cm=court_h_cm
-        )
-
-        label = f"Cross: ({x_cm:.1f}cm, {y_cm:.1f}cm)"
-        cv2.putText(
-            img,
-            label,
-            (cx + 10, cy - 10),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.7,
-            (255, 255, 255),
-            2
-        )
-
-        return img
-            
     def find_objects_in_image(self, img_bgr, w, h):
         warped = self.courseDetector.find_arena(img_bgr, w, h)
         if warped is None:
@@ -139,10 +97,10 @@ class ObjectTracker:
         kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
         sharpened = cv2.filter2D(blurred, -1, kernel)
 
-        orange_balls, omask, ocenter = self.detect_balls_by_hsv(blurred, lower=(0, 5, 120), upper=(40, 255, 255))
-        dark_orange_balls, domask, docenter = self.detect_balls_by_hsv(warped, lower=(0, 0, 240), upper=(180, 110, 255), lower2=(0, 0, 0), upper2=(180, 100, 50))
-        white_balls, wmask, wcenter = self.detect_balls_by_hsv(blurred, lower=(0, 0, 200), upper=(180, 110, 255))
-        shadowywhite_balls, sw, swcenter = self.detect_balls_by_hsv(blurred, lower=(0, 0, 115), upper=(180, 100, 250))
+        orange_balls, omask, ocenter = self.__detect_balls_by_hsv(blurred, lower=(0, 5, 120), upper=(40, 255, 255))
+        dark_orange_balls, domask, docenter = self.__detect_balls_by_hsv(warped, lower=(0, 0, 240), upper=(180, 110, 255), lower2=(0, 0, 0), upper2=(180, 100, 50))
+        white_balls, wmask, wcenter = self.__detect_balls_by_hsv(blurred, lower=(0, 0, 200), upper=(180, 110, 255))
+        shadowywhite_balls, sw, swcenter = self.__detect_balls_by_hsv(blurred, lower=(0, 0, 115), upper=(180, 100, 250))
         
         cross_position = self.courseDetector.find_red_cross_boxes(warped)
 

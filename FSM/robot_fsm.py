@@ -3,7 +3,7 @@ from Object_Tracking.Object_Tracking import find_objects_in_image, px_to_world_c
 from Navigation.Navigation import find_bot, find_optimal_corner_approach, drive_to_point
 from utils.point import Point
 from Navigation.Controller import Controller
-from settings.courtSettings import court_settings
+from utils.settings.courtSettings import court_settings
 
 class FSMFactory:
     # States
