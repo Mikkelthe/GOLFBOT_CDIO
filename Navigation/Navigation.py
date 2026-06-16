@@ -4,6 +4,16 @@ import numpy as np
 from pathlib import Path
 from point import *
 from Object_Tracking.Object_Tracking import *
+from settings.courtSettings import court_settings
+
+#picture dimensions center in pixel
+WARP_W, WARP_H = court_settings.image_width, court_settings.image_height
+CENTER_POINT_WARP = Point(WARP_W / 2, WARP_H / 2)
+BUFFER = 150 # distance in pixel between picture edge and the goal
+
+#actual dimensions and center in cm
+COURT_W_CM, COURT_H_CM = court_settings.court_width, court_settings.court_height
+CENTER_POINT_CM = Point(COURT_W_CM / 2, COURT_H_CM / 2)
 
 # find the relative vector from corner to bot
 # project this vector onto optimal approach vector
@@ -40,8 +50,6 @@ def find_optimal_corner_approach(cornerPosition: Point, botPosition: Point):
 
     return optimal_position
 
-
-
 #find distance between two points (for example: bot and ball)
 def find_distance_between_points(point1: Point, point2: Point):
     return np.sqrt(np.square(point2.x - point1.x) + np.square(point2.y - point1.y))
@@ -50,6 +58,9 @@ def find_distance_between_points(point1: Point, point2: Point):
 def drive_to_point(point:Point):
     commands = []
     return commands
+
+#takes the bots position and heading and a destination point
+#and finds if it is best to turn left or right and by how much
 def find_turn(current_heading, point1, point2):
     direction_radian = np.atan2(point2.y - point1.y, point2.x - point1.x)
     target_direction = round(math.degrees(direction_radian))
@@ -71,7 +82,7 @@ def find_turn(current_heading, point1, point2):
 
 #finds the optimal point to approach the goal (delivery point = 24 cm from goal)
 def find_goal_approach_point():
-    approach_point = Point(WARP_W-200, CENTER_POINT_WARP.y)
+    approach_point = Point(WARP_W - BUFFER, CENTER_POINT_WARP.y)
     return approach_point
 
 #find the robot position and heading in the picture using an ArUco-marker
@@ -102,7 +113,6 @@ def find_bot(image):
         return None, None
     return center, angle
 
-
 #find and set image folder/files
 base_path = Path(__file__).resolve().parent
 images_folder = base_path.parent / "Images"
@@ -111,23 +121,12 @@ image_files = list(images_folder.glob("*.jpg"))
 #load image
 img = cv2.imread("arena.jpg")
 
-#picture dimensions center in pixel
-WARP_W, WARP_H = 1500, 1000
-CENTER_POINT_WARP = Point(WARP_W / 2, WARP_H / 2)
-
-#actual dimensions and center in cm
-COURT_W_CM, COURT_H_CM = 170.0, 125.0
-CENTER_POINT_CM = Point(COURT_W_CM / 2, COURT_H_CM / 2)
-
 #find arena in img and draw on warped
 warped = find_arena(img, out_w=WARP_W, out_h=WARP_H)
 
 #finds all objects in img
-orange_ball, white_ball, dark_orange_balls, shadowywhite_balls, cross_position, a, b, c, d = find_objects_in_image(img, WARP_W, WARP_H)
-
-#draw objects on warped
-#draw_detections_on_warp(warped, orange_ball, "position", warp_w_px=WARP_W, warp_h_px=WARP_H, court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM)
-#draw_detections_on_warp(warped, white_ball, "position", warp_w_px=WARP_W, warp_h_px=WARP_H, court_w_cm=COURT_W_CM, court_h_cm=COURT_H_CM)
+orange_ball, white_ball, dark_orange_balls, shadowywhite_balls, cross_position, a, b, c, d, e, f, g, h = (
+    find_objects_in_image(img, WARP_W, WARP_H))
 
 #heading measures from x-axis and goes counter-clockwise
 botCoordinates, currentHeading = find_bot(warped)
