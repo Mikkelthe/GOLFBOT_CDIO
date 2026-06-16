@@ -1,10 +1,10 @@
 import numpy as np
-from numpy.typing import ArrayLike
 from typing import Self
 from .vector import Vector2
+from collections.abc import Sequence
 
-class Matrix22(ArrayLike):
-    def __init__(self, matrix: ArrayLike):
+class Matrix22(Sequence[Sequence[float]]):
+    def __init__(self, matrix: Sequence[Sequence[float]]):
         np_mat = np.matrix(matrix)
         if np_mat.shape != (2, 2):
             return ValueError("Matrix must have shape 2x2")
@@ -13,21 +13,21 @@ class Matrix22(ArrayLike):
     def __init__(self, a11: float, a12: float, a21: float, a22: float):
         self._data = np.matrix([[a11, a12], [a21, a22]])
 
-    def __add__(self, other: ArrayLike) -> Self:
+    def __add__(self, other: Sequence[Sequence[float]]) -> Self:
         np_mat = np.matrix(other)
         if np_mat.shape != (2, 2):
             return ValueError("Matrix must have shape 2x2")
 
         return Matrix22(self._data + np_mat)
     
-    def __sub__(self, other: ArrayLike) -> Self:
+    def __sub__(self, other: Sequence[Sequence[float]]) -> Self:
         np_mat = np.matrix(other)
         if np_mat.shape != (2, 2):
             return ValueError("Matrix must have shape 2x2")
 
         return Matrix22(self._data - np_mat)
     
-    def __mul__(self, other: ArrayLike) -> Self | Vector2:
+    def __mul__(self, other: Sequence[Sequence[float]]) -> Self | Vector2:
         np_mat = np.matrix(other)
 
         if np_mat.shape == (2, 2):

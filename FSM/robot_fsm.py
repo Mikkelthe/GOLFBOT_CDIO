@@ -1,14 +1,17 @@
 from .state import *
-from Object_Tracking.Object_Tracking import find_objects_in_image, px_to_world_cm, find_arena, cm_to_px
+from Object_Tracking.Object_Tracking import ObjectTracker
 from Navigation.Navigation import find_bot, find_optimal_corner_approach, drive_to_point
 from utils.point import Point
 from Navigation.Controller import Controller
 from utils.settings.courtSettings import court_settings
+import json
+import io
+from pathlib import Path
 
 class FSMFactory:
     # States
     @staticmethod
-    def detectStateHandler(controller: Controller, golfBot: GolfBotMemory):
+    def detectBallsStateHandler(controller: Controller, golfBot: GolfBotMemory):
         #ToDo: Change the find_objects_in_image, to persistant ball finder
         warp_w = court_settings.image_width
         warp_h = court_settings.image_height
@@ -20,6 +23,10 @@ class FSMFactory:
         golfBot.arena = golfBot.courseDetector.find_arena(img)
         return None
 
+    @staticmethod
+    def approachPointStateHandler(controller: Controller, golfBot: GolfBotMemory):
+        return None
+    
     @staticmethod
     def collectOrangeStateHandler(controller: Controller, golfBot: GolfBotMemory):
         golfBot.currentBall = golfBot.orangeBalls[0]
@@ -46,8 +53,9 @@ class FSMFactory:
     @staticmethod
     def approachCoordinateInCornerStateHandler(controller: Controller, golfBot: GolfBotMemory):
         # ToDo: go to line in quadrant
-        x = cm_to_px(golfBot.currentBall[0])
-        y = cm_to_px(golfBot.currentBall[1])
+        
+        x = golfBot.objectTracker.cm_to_px(golfBot.currentBall[0])
+        y = golfBot.objectTracker.cm_to_px(golfBot.currentBall[1])
         ballPoint = Point(x, y)
         a, b, c, = find_bot(golfBot.arena)
         cornerApproachPoint = find_optimal_corner_approach(a, ballPoint)
@@ -107,6 +115,10 @@ class FSMFactory:
         #ToDo run unstuck function
         #ToDo consider rechecking for balls in transitiion from SubmitBalls
         return None
+    
+    @staticmethod
+    def readjustStateHandler(controller: Controller, golfBot: GolfBotMemory):
+        return None
 
     # Transitions
     @staticmethod
@@ -115,6 +127,43 @@ class FSMFactory:
             return True
         return False
 
+    @staticmethod
+    def whiteInQuadrantTransitionHandler(golfbot: GolfBotMemory):
+        return False
+    
+    @staticmethod
+    def obstacleInPathTransitionHandler(golfbot: GolfBotMemory):
+        return False
+
+    @staticmethod
+    def reachedGoalTransitionHandler(golfbot: GolfBotMemory):
+        return False
+
+    @staticmethod
+    def failedToCollectOrangeTransitionHandler(golfbot: GolfBotMemory):
+        return False
+
+    @staticmethod
+    def obstacleAvoidedTransitionHandler(golfbot: GolfBotMemory):
+        return False
+
+    
+    @staticmethod
+    def nearestBallInCornerTransitionHandler(golfbot: GolfBotMemory):
+        return False
+
+    @staticmethod
+    def nearestBallNotInCornerTransitionHandler(golfbot: GolfBotMemory):
+        return False
+    
+    @staticmethod
+    def ballCollectedTransitionHandler(golfbot: GolfBotMemory):
+        return False
+
+    @staticmethod
+    def failedToCollectBallTransitionHandler(golfbot: GolfBotMemory):
+        return False
+    
     @staticmethod
     def orangeDetectedTransitionHandler(golfBot: GolfBotMemory):
         orangeBalls = golfBot.orangeBalls
@@ -156,6 +205,10 @@ class FSMFactory:
                 return True
         return False
 
+    @staticmethod
+    def whiteNotInQuadrantTransitionHandler(golfBot: GolfBotMemory):
+        return not FSMFactory.whiteInQuadrantTransitionHandler(golfBot)
+    
     @staticmethod
     def inNewQuadrantTransitionHandler(golfBot: GolfBotMemory):
         if FSMFactory.currentQuadrant(golfBot) != golfBot.quadrant:
@@ -202,7 +255,7 @@ class FSMFactory:
         warp_w = court_settings.image_width
         warp_h = court_settings.image_height
         position = find_bot(golfBot.arena)
-        x, y =px_to_world_cm(position.point[0],position.point[1],warp_w,warp_h)
+        x, y = golfBot.objectTracker.px_to_world_cm(position.point[0],position.point[1],warp_w,warp_h)
         point = [x,y]
         cross_center = golfBot.cross
 
@@ -217,35 +270,29 @@ class FSMFactory:
 
     @staticmethod
     def createRobotFSM():
-        detectState = State()
-        detectState.setHandler(FSMFactory.detectStateHandler)
+        factory = FSMFactory()
+        fsm = json.load(io.open(str(Path(__file__).parent /  "fsm.json")))
 
-        collectOrangeState = State()
-        collectOrangeState.setHandler(FSMFactory.collectOrangeStateHandler)
+        states: dict[str, dict] = fsm['states']
+        stateTransitions: dict[str, list] = fsm['stateTransitions']
+        
+        stateObjects = {}
+        transitionObjects = []
+        for name, handler in states.items():
+            handlerName = states[name]['handler']
+            handlerMethod = getattr(factory, handlerName)
+            newState = State()
+            newState.setHandler(handlerMethod)
+            stateObjects[name] = newState
 
-        checkQuadrantState = State()
-        checkQuadrantState.setHandler(FSMFactory.checkQuadrantStateHandler)
+        for state, transitions in stateTransitions.items():
+            for transition in transitions:
+                handlerName = transition['handler']
+                nextState = transition['nextState']
+                handlerMethod = getattr(factory, handlerName)
+                newTransition = Transition(stateObjects[state], stateObjects[nextState])
+                newTransition.setConditionHandler(handlerMethod)
+                transitionObjects.append(newTransition)
 
-        findNearestState = State()
-        findNearestState.setHandler(FSMFactory.findNearestStateHandler)
-
-        approachCoordinateInCornerState = State()
-        approachCoordinateInCornerState.setHandler(FSMFactory.approachCoordinateInCornerStateHandler)
-
-        readjustState = State()
-        readjustState.setHandler(FSMFactory.readjustStateHandler)
-
-        approachWhiteCoordinateState = State()
-        approachWhiteCoordinateState.setHandler(FSMFactory.approachWhiteCoordinateStateHandler)
-
-        approachNewQuadrantState = State()
-        approachNewQuadrantState.setHandler(FSMFactory.approachNewQuadrantStateHandler)
-
-        approachNarrowGoalState = State()
-        approachNarrowGoalState.setHandler(FSMFactory.approachNarrowGoalStateHandler)
-
-        avoidObstacleGoalState = State()
-        avoidObstacleGoalState.setHandler(FSMFactory.avoidObstacleStateHandler)
-
-        submitBallsState = State()
-        submitBallsState.setHandler(FSMFactory.submitBallsStateHandler)
+        
+        return StateMachine(GolfBotMemory(None), None, stateObjects[fsm['startState']])
