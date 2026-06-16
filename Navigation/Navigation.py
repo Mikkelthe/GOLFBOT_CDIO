@@ -164,7 +164,7 @@ ground_x = int(round(ground_x + displacement_in_px * math.cos(angle_in_radians))
 ground_y = int(round(ground_y + displacement_in_px * math.sin(angle_in_radians)))
 
 # Update botCoordinates to the ground-projected pixel coordinates (use a Point if you prefer)
-botCoordinates = (ground_x, ground_y)
+botCoordinates = Point(ground_x, ground_y)
 bot_radius = cm_to_px(17.5, warp_w_px=WARP_W, warp_h_px=WARP_H)
 bot_circle = (botCoordinates, bot_radius)
 #draw bot on warped as circle(current bot radius is 16)
@@ -181,7 +181,7 @@ cv2.drawContours(warped, [bot_box], 0, (255, 0, 0), 3)
 
 #draw current heading from bot on warped
 arrow_length = 100 #px
-end_point = (
+end_point = Point(
     int(ground_x + arrow_length * np.cos(np.radians(currentHeading))),
     int(ground_y + arrow_length * np.sin(np.radians(currentHeading)))
 )
