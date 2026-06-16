@@ -75,6 +75,10 @@ if __name__ == "__main__":
         warped = find_arena(img, out_w=WARP_W, out_h=WARP_H)
         if warped is None:
             raise RuntimeError("Could not find arena")
+        dilated = cv2.dilate(warped, np.ones((1, 1), np.uint8), iterations=1)
+        blurred = cv2.GaussianBlur(dilated, (3,3), 0)
+        kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+        sharpened = cv2.filter2D(blurred, -1, kernel)
 
         orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, omask, domask, wmask, sw, wcenter, ocenter, swcenter, docenter = find_objects_in_image(img, WARP_W, WARP_H)
         rounded_objects, rounded_vip_objects = group_valid_objects(wcenter, ocenter, swcenter, docenter)
@@ -116,7 +120,8 @@ if __name__ == "__main__":
 
         cv2.imwrite(str(swmaskpath), sw)
         cross_position = find_red_cross_boxes(warped)
-        vis = warped.copy()
+
+        vis = blurred.copy()
         draw_detections_on_warp(
             vis, orange_balls, "O",
             warp_w_px=WARP_W, warp_h_px=WARP_H,
