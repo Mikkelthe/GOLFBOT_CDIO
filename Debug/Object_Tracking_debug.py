@@ -66,7 +66,7 @@ if __name__ == "__main__":
             print("Could not load image")
             continue
 
-        warped = courseDetector.find_arena(img, out_w=WARP_W, out_h=WARP_H)
+        warped = courseDetector.find_arena(img)
         if warped is None:
             raise RuntimeError("Could not find arena")
         dilated = cv2.dilate(warped, np.ones((1, 1), np.uint8), iterations=1)

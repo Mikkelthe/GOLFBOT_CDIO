@@ -33,7 +33,7 @@ while run:
 
 
     vis = frame.copy()
-    vis = courseDetector.find_arena(vis, WARP_W, WARP_H)
+    vis = courseDetector.find_arena(vis)
 
     dilated = cv2.dilate(vis, np.ones((3,3), np.uint8), iterations=1)
     blurred = cv2.GaussianBlur(vis, (5,5),0)

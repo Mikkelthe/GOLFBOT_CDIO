@@ -17,7 +17,7 @@ class FSMFactory:
         golfBot.whiteBalls = white_balls + shadowywhite_balls
         golfBot.cross = cross_position["center"]
         _, img = golfBot.videoDevice.read()
-        golfBot.arena = golfBot.courseDetector.find_arena(img,warp_w,warp_h)
+        golfBot.arena = golfBot.courseDetector.find_arena(img)
         return None
 
     @staticmethod
