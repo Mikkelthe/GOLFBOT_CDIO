@@ -8,6 +8,7 @@ from pybricks.robotics import DriveBase
 from pybricks.media.ev3dev import SoundFile, ImageFile
 from golfbot import GolfBot
 from socket import *
+import re
 
 HOST = '0.0.0.0'
 PORT = 6853
@@ -27,20 +28,13 @@ def command_udp():
     move_amount = 10
     turn_amount = 10
     while True:
-        data, address = s.recvfrom(32)
+        data = s.recv(32)
         inpt = data.decode('utf-8')
-        if inpt == 'w':
-            bot.move_fwd()
-        elif inpt == 's':
-            bot.move_back()
-        elif inpt == 'wa':
-            bot.move_fwd_left()
-        elif inpt == 'wa':
-            bot.move_fwd_right()
-        elif inpt == 'a':
-            bot.turn_left()
-        elif inpt == 'd':
-            bot.turn_right()
+        matches = re.findall("^\\[(-?\\d+\\.\\d+),\\s*(-?\\d+\\.\\d+)\\]$", inpt)
+        if len(matches) != 0:
+            x = float(matches[0][0])
+            y = float(matches[0][1])
+            bot.move_dir(x, y)
         elif inpt == 'o':
             bot.open_ramp()
         elif inpt == 'p':
