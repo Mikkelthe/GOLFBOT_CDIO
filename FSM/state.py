@@ -73,7 +73,7 @@ class GolfBotMemory:
         self.objectTracker = ObjectTracker()
         self.courseDetector = CourseDetector()
 
-        self.arena = self.courseDetector.find_arena(img,1500,1000)
+        self.arena = self.courseDetector.find_arena(img)
         self.cross = 0
         self.goingToCornerLine = False
 

@@ -18,7 +18,7 @@ image_files = list(images_folder.glob("*.jpg"))
 img = cv2.imread("arena.jpg")
 
 # find arena in img and draw on warped
-warped = nav.cd.find_arena(img, out_w=nav.warp_W, out_h=nav.warp_H)
+warped = nav.cd.find_arena(img)
 
 # finds all objects in img
 orange_ball, white_ball, dark_orange_balls, shadowywhite_balls, cross_position, a, b, c, d, e, f, g, h = (

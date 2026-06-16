@@ -13,7 +13,7 @@ class Navigation:
         self.ot = ObjectTracker()
         self.warp_W = court_settings.image_width #picture width center in pixel
         self.warp_H = court_settings.image_height #picture height center in pixel
-        self.buffer = 150 # distance in pixel between picture edge and the goal
+        self.buffer = court_settings.padding + 50 #distance in pixel between picture edge and the goal
         self.court_W = court_settings.court_width #arena width in cm
         self.court_H = court_settings.court_height #arena height in cm
     
