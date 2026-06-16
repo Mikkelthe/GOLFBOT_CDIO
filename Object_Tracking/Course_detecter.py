@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from matplotlib.image import imsave
 
-from settings.courtSettings import court_settings
+from utils.settings.courtSettings import court_settings
 
 
 class CourseDetector:
