@@ -2,9 +2,12 @@ import cv2
 import numpy as np
 from matplotlib.image import imsave
 
+from settings.courtSettings import court_settings
+
+
 class CourseDetector:
     def __init__(self):
-        self.padding = 100
+        self.padding = court_settings.padding
 
     @staticmethod
     def __hsv_mask_red(hsv):
@@ -377,15 +380,15 @@ class CourseDetector:
             "center": center,
         }
 
-    def find_arena(self, img, out_w, out_h):
+    def find_arena(self, img):
         # corners must be TL,TR,BR,BL float32
-        dst = np.array([[0,0],[out_w,0],[out_w,out_h],[0,out_h]], dtype=np.float32)
+        dst = np.array([[0,0],[court_settings.image_width,0],[court_settings.image_width,court_settings.image_height],[0,court_settings.image_height]], dtype=np.float32)
         corners = self.__find_box_corners_by_hough(img)
 
         if corners[0] is None:
             return img
         print(corners)
         M = cv2.getPerspectiveTransform(corners.astype(np.float32), dst)
-        warped = cv2.warpPerspective(img, M, (out_w, out_h))
+        warped = cv2.warpPerspective(img, M, (court_settings.image_width, court_settings.image_height))
         return warped
 
