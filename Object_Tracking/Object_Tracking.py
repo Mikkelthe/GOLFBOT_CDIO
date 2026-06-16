@@ -89,7 +89,7 @@ class ObjectTracker:
         return center, angle
 
     def find_objects_in_image(self, img_bgr, w, h):
-        warped = self.courseDetector.find_arena(img_bgr, w, h)
+        warped = self.courseDetector.find_arena(img_bgr)
         if warped is None:
             return None, None
 
