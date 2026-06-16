@@ -9,15 +9,12 @@ class FSMFactory:
     # States
     @staticmethod
     def detectStateHandler(controller: Controller, golfBot: GolfBotMemory):
-        #ToDo: Change the find_objects_in_image, to persistant ball finder
+        #ToDone: Change the find_objects_in_image, to persistant ball finder
         warp_w = court_settings.image_width
         warp_h = court_settings.image_height
-        orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, _, _, _, _ = golfBot.objectTracker.find_objects_in_image(img,warp_w ,warp_h)
-        golfBot.orangeBalls = orange_balls + dark_orange_balls
-        golfBot.whiteBalls = white_balls + shadowywhite_balls
-        golfBot.cross = cross_position["center"]
         _, img = golfBot.videoDevice.read()
         golfBot.arena = golfBot.courseDetector.find_arena(img)
+        golfBot.whiteBalls, golfBot.orangeBalls, golfBot.cross = golfBot.objectTracker.find_objects_in_image(img,warp_w ,warp_h)
         return None
 
     @staticmethod
