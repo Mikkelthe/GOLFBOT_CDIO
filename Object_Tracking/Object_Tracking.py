@@ -173,7 +173,7 @@ class ObjectTracker:
         for (coord_x, coord_y) in accumulated_priority_objects_list:
             if (coord_x, coord_y) not in self.validPriorityObjects and accumulated_priority_objects_list.count((coord_x,coord_y)) > 2:
                 coord_point = Point(coord_x, coord_y)
-                self.accumulatedPriorityObjects.append(coord_point)
+                self.validPriorityObjects.append(coord_point)
 
         # print(f"{real_objects_list} FINAL LIST {len(real_objects_list)}")
         # print(f"{real_vip_objects_list} FINAL VIPS {len(real_vip_objects_list)}")

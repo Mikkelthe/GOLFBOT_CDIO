@@ -159,7 +159,7 @@ class CourseDetector:
         #cv2.imwrite("debug_middle_roi.png", debug)
 
         hsv = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2HSV)
-        red_mask = self.hsv_mask_red(hsv)
+        red_mask = self.__hsv_mask_red(hsv)
 
         kernel = np.ones((5, 5), np.uint8)
         red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_OPEN, kernel, iterations=1)
