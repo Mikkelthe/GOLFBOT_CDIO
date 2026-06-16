@@ -3,14 +3,11 @@ import cv2
 import numpy as np
 from pathlib import Path
 from utils.point import *
-from Object_Tracking.Object_Tracking import *
 from settings.courtSettings import court_settings
 from utils.conversion import *
 class Navigation:
     def __init__(self):
         self.converter = Conversion()
-        self.cd = CourseDetector()
-        self.ot = ObjectTracker()
         self.warp_W = court_settings.image_width #picture width center in pixel
         self.warp_H = court_settings.image_height #picture height center in pixel
         self.buffer = court_settings.padding + 50 #distance in pixel between picture edge and the goal
@@ -53,18 +50,14 @@ class Navigation:
         return optimal_position
     
     #find distance between two points (for example: bot and ball)
+    @staticmethod
     def find_distance_between_points(self, point1: Point, point2: Point):
         return np.sqrt(np.square(point2.x - point1.x) + np.square(point2.y - point1.y))
-
-    #find the best turn from current heading to a point
-    def drive_to_point(self, point:Point):
-        commands = []
-        return commands
-    
     
     #takes the bots position and heading and a destination point
     #and finds if it is best to turn left or right and by how much
-    def find_turn(self, current_heading, point1, point2):
+    @staticmethod
+    def find_turn(current_heading, point1, point2):
         direction_radian = np.atan2(point2.y - point1.y, point2.x - point1.x)
         target_direction = round(math.degrees(direction_radian))
         delta_direction = target_direction - current_heading
