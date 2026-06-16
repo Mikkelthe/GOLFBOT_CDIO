@@ -8,7 +8,7 @@ run = True
 WARP_W, WARP_H = 1500, 1000
 COURT_W_CM, COURT_H_CM = 170.0, 125.0
 
-videodevice = cv2.VideoCapture(0,cv2.CAP_DSHOW)
+videodevice = cv2.VideoCapture(1,cv2.CAP_DSHOW)
 videodevice.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
 videodevice.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
@@ -18,6 +18,8 @@ time.sleep(5)
 for _ in range(20):
     videodevice.read()
 
+accumulated_objects, accumulated_vip_objects = list(), list()
+j=0
 while run:
     ret, frame = videodevice.read()
 
@@ -30,9 +32,14 @@ while run:
     vis = find_arena(vis, WARP_W, WARP_H)
 
     dilated = cv2.dilate(vis, np.ones((3,3), np.uint8), iterations=1)
-    blurred = cv2.medianBlur(dilated, 5)
+    blurred = cv2.GaussianBlur(vis, (5,5),0)
 
-    orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, a, b, c, d = find_objects_in_image(frame, WARP_W, WARP_H)
+    orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, omask, domask, wmask, sw, wcenter, ocenter, swcenter, docenter = find_objects_in_image(
+        frame, WARP_W, WARP_H)
+    rounded_objects, rounded_vip_objects = group_valid_objects(wcenter, ocenter, swcenter, docenter)
+    accumulate_valid_objects(accumulated_objects, accumulated_vip_objects, rounded_objects, rounded_vip_objects, j)
+    j += 1
+    print(f"frame {j}")
 
     draw_detections_on_warp(
         vis, orange_balls, "O",

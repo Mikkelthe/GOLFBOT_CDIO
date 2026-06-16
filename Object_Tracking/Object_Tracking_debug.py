@@ -4,7 +4,7 @@ from time import sleep
 from .Object_Tracking import (
     detect_balls_by_hsv,
     draw_detections_on_warp,
-    draw_cross_on_warp, find_objects_in_image
+    draw_cross_on_warp, find_objects_in_image, group_valid_objects, accumulate_valid_objects
 )
 from .Course_detecter import (
     find_arena,
@@ -14,10 +14,11 @@ from .Course_detecter import (
 import cv2
 import numpy as np
 from pathlib import Path
+from settings.courtSettings import court_settings
 
 
 if __name__ == "__main__":
-    start_i = 0
+    start_i = 22
     i = start_i
     base_path = Path(__file__).resolve().parent
     output_folder = base_path.parent / "Warped_Images"
@@ -25,11 +26,11 @@ if __name__ == "__main__":
     imagecount = 20
         
     # ---- Court settings ----
-    WARP_W, WARP_H = 1500, 1000
-    COURT_W_CM, COURT_H_CM = 170.0, 125.0
+    WARP_W, WARP_H = court_settings.image_width, court_settings.image_height
+    COURT_W_CM, COURT_H_CM = court_settings.court_width, court_settings.court_height
 
     if i < imagecount:
-        videodevice = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        videodevice = cv2.VideoCapture(1, cv2.CAP_DSHOW)
         videodevice.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
         videodevice.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
         time.sleep(2)
@@ -38,7 +39,7 @@ if __name__ == "__main__":
         i += 1
         if i%5 == 0:
             print("move")
-            time.sleep(10)
+            sleep(1)
         ret, img = videodevice.read()
         videocapturedimagepath = f"Images/captured_image_{i}.jpg"
 
@@ -61,6 +62,8 @@ if __name__ == "__main__":
 
     print(f"Found {len(image_files)} images")
 
+    accumulated_objects, accumulated_vip_objects = list(), list()
+    j=0
     for img_path in image_files:
         print(f"Processing {img_path.name}")
 
@@ -72,8 +75,15 @@ if __name__ == "__main__":
         warped = find_arena(img, out_w=WARP_W, out_h=WARP_H)
         if warped is None:
             raise RuntimeError("Could not find arena")
+        dilated = cv2.dilate(warped, np.ones((1, 1), np.uint8), iterations=1)
+        blurred = cv2.GaussianBlur(dilated, (3,3), 0)
+        kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+        sharpened = cv2.filter2D(blurred, -1, kernel)
 
-        orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, omask, domask, wmask, sw = find_objects_in_image(img, WARP_W, WARP_H)
+        orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, omask, domask, wmask, sw, wcenter, ocenter, swcenter, docenter = find_objects_in_image(img, WARP_W, WARP_H)
+        rounded_objects, rounded_vip_objects = group_valid_objects(wcenter, ocenter, swcenter, docenter)
+        accumulate_valid_objects(accumulated_objects,accumulated_vip_objects,rounded_objects, rounded_vip_objects, j)
+        j+=1
 
         # orange_balls, omask = detect_balls_by_hsv(warped, lower=(0, 40, 140), upper=(40, 255, 255))
         # dark_orange_balls, domask = detect_balls_by_hsv(warped, lower=(5, 120, 120), upper=(30, 255, 255))
@@ -110,7 +120,8 @@ if __name__ == "__main__":
 
         cv2.imwrite(str(swmaskpath), sw)
         cross_position = find_red_cross_boxes(warped)
-        vis = warped.copy()
+
+        vis = blurred.copy()
         draw_detections_on_warp(
             vis, orange_balls, "O",
             warp_w_px=WARP_W, warp_h_px=WARP_H,
