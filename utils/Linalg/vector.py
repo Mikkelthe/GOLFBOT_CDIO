@@ -48,8 +48,10 @@ class Vector2(Sequence[float]):
         Returns:
             A new rotated vector
         """
-        return np.matrix([[np.cos(angle), np.sin(angle)],
+
+        arr = np.matrix([[np.cos(angle), np.sin(angle)],
                    [-np.sin(angle), np.cos(angle)]]) @ self._arr
+        return Vector2(arr[0], arr[1])
 
     @staticmethod
     def dot(a: Sequence[float], b: Sequence[float]) -> float:
@@ -101,9 +103,9 @@ class Vector2(Sequence[float]):
         if len(a) != len(b) or len(a) != 2 or len(b) != 2:
             raise ValueError("Length of arrays must be 2")
 
-        vecA = Vector2(a)
-        vecB = Vector2(b)
-        np.arccos(Vector2.dot(vecA, vecB)/(vecA.magnitude*vecB.magnitude))
+        vecA = Vector2(a[0], a[1])
+        vecB = Vector2(b[0], b[1])
+        return np.arccos(Vector2.dot(vecA, vecB)/(vecA.magnitude*vecB.magnitude))
         
     @staticmethod
     def signedAngle(a: Sequence[float], b: Sequence[float]) -> float:
@@ -126,7 +128,6 @@ class Vector2(Sequence[float]):
     
     @property
     def x(self) -> float:
-        Vector2.signedAngle()
         return self._arr[0]
     
     @property

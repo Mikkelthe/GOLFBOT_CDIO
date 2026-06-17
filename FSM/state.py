@@ -10,6 +10,7 @@ import cv2
 from Navigation.Navigation import Navigation
 from utils.conversion import Conversion
 from utils.point import Point
+from robot_logic.route_planning.route_planner import RoutePlanner
 
 
 # TODO: Use vectors and matricies
@@ -78,6 +79,9 @@ class GolfBotMemory:
         self.converter = Conversion()
         self.approachPoint = Point(0,0)
         self.deliveryPoint = Point(0,0)
+        self.router = RoutePlanner()
+        self.pos = 0
+        self.heading = 0
 
         self.videoDevice = cv2.VideoCapture(1, cv2.CAP_DSHOW)
         self.videoDevice.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
