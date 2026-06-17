@@ -15,10 +15,10 @@ class FSMFactory:
         #ToDo: Change the find_objects_in_image, to persistant ball finder
         warp_w = court_settings.image_width
         warp_h = court_settings.image_height
-        orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, _, _, _, _ = golfBot.objectTracker.find_objects_in_image(img,warp_w ,warp_h)
-        golfBot.orangeBalls = orange_balls + dark_orange_balls
-        golfBot.whiteBalls = white_balls + shadowywhite_balls
-        golfBot.cross = cross_position["center"]
+        white_balls, orange_balls, cross_position = golfBot.objectTracker.find_objects_in_image(img,warp_w ,warp_h)
+        golfBot.orangeBalls = orange_balls
+        golfBot.whiteBalls = white_balls
+        golfBot.cross = cross_position
         _, img = golfBot.videoDevice.read()
         golfBot.arena = golfBot.courseDetector.find_arena(img)
         return None
@@ -64,8 +64,8 @@ class FSMFactory:
         if a == cornerApproachPoint:
             golfBot.goingToCornerLine = False
         if golfBot.goingToCornerLine:
-            commands = drive_to_point(cornerApproachPoint)
-            sendCommmands(commands)
+            movementvector = drive_to_point(cornerApproachPoint)
+            sendCommmands(movementvector)
         else:
         #consider splitting states to one to get to the corner, then get the ball. How do i split this?
         # ToDo: go to ball
@@ -77,6 +77,8 @@ class FSMFactory:
     @staticmethod
     def readjustStateHandler(controller: Controller, golfBot: GolfBotMemory):
         # ToDo add nav to readjustment
+        sendCommands(Vector2(x=-1,y=0))
+
         return None
     
     @staticmethod
