@@ -155,7 +155,9 @@ class FSMFactory:
     @staticmethod
     def reachedGoalTransitionHandler(golfbot: GolfBotMemory):
         _, img = videodevice.read()
-        if golfbot.objectTracker.find_bot(img)[0] == golfbot.deliveryPoint:
+        golfbot.pos, golfbot.heading = golfbot.objectTracker.find_bot(img)
+        distance = golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.deliveryPoint)
+        if distance < 1:
             return True
         else:
             return False
@@ -163,7 +165,10 @@ class FSMFactory:
     @staticmethod
     def reachedApproachPointTransitionHandler(golfbot: GolfBotMemory):
         _, img = videodevice.read()
-        if golfbot.objectTracker.find_bot(img)[0] == golfbot.approachPoint:
+        golfbot.pos, golfbot.heading = golfbot.objectTracker.find_bot(img)
+        distance = golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.deliveryPoint)
+
+        if distance > 1 & golfbot.navigator.find_turn(golfbot.heading,golfbot.pos,golfbot.currentBall)[1] < 0.35:
             return True
         else:
             return False
@@ -180,15 +185,19 @@ class FSMFactory:
     
     @staticmethod
     def nearestBallInCornerTransitionHandler(golfbot: GolfBotMemory):
+        if FSMFactory.IsInCorner(golfbot, golfbot.currentBall[0], golfbot.currentBall[1]):
+            return True
         return False
 
     @staticmethod
     def nearestBallNotInCornerTransitionHandler(golfbot: GolfBotMemory):
+        if not FSMFactory.nearestBallInCornerTransitionHandler(golfbot):
+            return True
         return False
     
     @staticmethod
     def ballCollectedTransitionHandler(golfbot: GolfBotMemory):
-        if golfbot.converter.px_to_world_cm(golfbot.navigator.find_distance_between_points(golfbot.currentBall,golfbot.pos)) < 20 & golfbot.converter.px_to_world_cm(golfbot.navigator.find_distance_between_points(golfbot.currentBall,golfbot.pos)) > 17 & golfbot.navigator.find_turn(golfbot.heading,golfbot.pos,golfbot.currentBall)[1] < 0.035 & golfbot.navigator.find_turn(golfbot.heading,golfbot.pos,golfbot.currentBall)[1] > -0.035:
+        if golfbot.converter.px_to_world_cm(golfbot.navigator.find_distance_between_points(golfbot.currentBall,golfbot.pos)) < 20 & golfbot.converter.px_to_world_cm(golfbot.navigator.find_distance_between_points(golfbot.currentBall,golfbot.pos)) > 17 & golfbot.navigator.find_turn(golfbot.heading,golfbot.pos,golfbot.currentBall)[1] < 0.035:
             return True
         return False
 
@@ -207,13 +216,16 @@ class FSMFactory:
 
     @staticmethod
     def orangeInCornerTransitionHandler(golfBot: GolfBotMemory):
-        if golfBot.orangeBalls[1] == golfBot.currentBall:
+        inCorner = FSMFactory.IsInCorner(golfBot.currentBall[0], golfBot.currentBall[1])
+        if golfBot.orangeBalls[0] == golfBot.currentBall & inCorner:
             golfBot.goingToCornerLine = True
-            return FSMFactory.IsInCorner(golfBot.currentBall[0], golfBot.currentBall[1])
+            return True
         return False
 
     @staticmethod
     def orangeCollectedTransitionHandler(golfBot: GolfBotMemory):
+        if golfBot.converter.px_to_world_cm(golfBot.navigator.find_distance_between_points(golfBot.pos, golfBot.currentBall)) > 20 & golfBot.navigator.find_turn(golfBot.heading,golfBot.pos,golfBot.currentBall)[1] < 0.035:
+            return True
         return False
     
     @staticmethod
@@ -264,6 +276,7 @@ class FSMFactory:
     
     @staticmethod
     def isInQuadrant(x,y,golfBot: GolfBotMemory):
+        x,y = golfBot.converter.px_to_world_cm(x,y)
         if x <= golfBot.cross[0] and y < golfBot.cross[1] and golfBot.quadrant == 1:
             return True
         elif x > golfBot.cross[0] and y <= golfBot.cross[1] and golfBot.quadrant == 2:
@@ -274,11 +287,13 @@ class FSMFactory:
             return True
     
     @staticmethod
-    def IsInCorner(x,y):
+    def IsInCorner(golfbot: GolfBotMemory, x,y):
+        x,y = golfbot.converter.px_to_world_cm(x,y)
         return FSMFactory.xCoordinateinCorner(x) and FSMFactory.yCoordinateinCorner(y)
     
     @staticmethod
     def xCoordinateinCorner(x):
+
         return x<15 or x>court_settings.court_width-15
 
     @staticmethod
