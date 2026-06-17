@@ -295,4 +295,6 @@ class FSMFactory:
                 transitionObjects.append(newTransition)
 
         
-        return StateMachine(GolfBotMemory(None), None, stateObjects[fsm['startState']])
+        return StateMachine(GolfBotMemory(), 
+                            Controller(('172.20.10.7', 6853), ('172.20.10.7', 80)), 
+                            stateObjects[fsm['startState']])

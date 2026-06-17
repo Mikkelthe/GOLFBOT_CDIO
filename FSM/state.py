@@ -61,7 +61,7 @@ class Transform:
 
 
 class GolfBotMemory:
-    def __init__(self, img):
+    def __init__(self):
         # TODO: Store more stuff in memory
         self.quadrant = 0
         self.currentBall: Vector2 = None
@@ -73,13 +73,15 @@ class GolfBotMemory:
         self.objectTracker = ObjectTracker()
         self.courseDetector = CourseDetector()
 
+        self.videoDevice = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+        self.videoDevice.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+        self.videoDevice.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+
+        _, img = self.videoDevice.read()
         self.arena = self.courseDetector.find_arena(img)
         self.cross = 0
         self.goingToCornerLine = False
 
-        self.videoDevice = cv2.VideoCapture(1, cv2.CAP_DSHOW)
-        self.videoDevice.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-        self.videoDevice.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
     @property
     def transform(self):
@@ -87,7 +89,7 @@ class GolfBotMemory:
 
     def updateTransform(self):
         _, img = self.videoDevice.read()
-        point, angle = find_bot(img)
+        point, angle = self.objectTracker.find_bot(img)
         self._transform.position = Vector2(point.x, point.y)
         self._transform.rotation = math.radians(angle)
 
@@ -127,4 +129,5 @@ class StateMachine:
             for transition in currentStateTransitions:
                 if transition.conditionHandler(self.memory):
                     self.currentState = transition.stateTo
+                    print(f"Switched state: condition handler {transition.conditionHandler.__name__}")
                     break

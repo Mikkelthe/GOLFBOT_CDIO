@@ -3,11 +3,13 @@ from pathlib import Path
 import cv2
 import numpy as np
 from Navigation import Navigation
+from Object_Tracking.Course_detecter import CourseDetector
 from point import Point
 from Object_Tracking.Object_Tracking import ObjectTracker
 
 nav = Navigation()
 tracker = ObjectTracker()
+course = CourseDetector()
 
 # find and set image folder/files
 base_path = Path(__file__).resolve().parent
@@ -18,18 +20,20 @@ image_files = list(images_folder.glob("*.jpg"))
 img = cv2.imread("arena.jpg")
 
 # find arena in img and draw on warped
-warped = nav.cd.find_arena(img)
+warped = course.find_arena(img)
 
 # finds all objects in img
-orange_ball, white_ball, dark_orange_balls, shadowywhite_balls, cross_position, a, b, c, d, e, f, g, h = (
-    nav.ot.find_objects_in_image(img, nav.warp_W, nav.warp_H))
+tracker.find_objects_in_image(img, nav.warp_W, nav.warp_H)
+tracker.find_objects_in_image(img, nav.warp_W, nav.warp_H)
+white_ball, orange_ball, cross_position = (tracker.find_objects_in_image(img, nav.warp_W, nav.warp_H))
+
 
 # heading measures from x-axis and goes counter-clockwise
 botCoordinates, currentHeading = tracker.find_bot(warped)
 
 # ball coordinates
-white_x = white_ball[0][0]
-white_y = white_ball[0][1]
+white_x = white_ball[0].x
+white_y = white_ball[0].y
 
 # convert from cm to pixel
 ballCoordinates = nav.converter.world_cm_to_px(white_x, white_y, nav.warp_W, nav.warp_H)
