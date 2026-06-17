@@ -2,7 +2,7 @@ import math
 from pathlib import Path
 import cv2
 import numpy as np
-from Navigation import Navigation
+from Navigation.Navigation import Navigation
 from Object_Tracking.Course_detecter import CourseDetector
 from point import Point
 from Object_Tracking.Object_Tracking import ObjectTracker
@@ -17,7 +17,7 @@ images_folder = base_path.parent / "Images"
 image_files = list(images_folder.glob("*.jpg"))
 
 # load image
-img = cv2.imread("arena.jpg")
+img = cv2.imread("../Navigation/arena.jpg")
 
 # find arena in img and draw on warped
 warped = course.find_arena(img)
