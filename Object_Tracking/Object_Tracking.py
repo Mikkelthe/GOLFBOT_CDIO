@@ -91,7 +91,7 @@ class ObjectTracker:
     def find_objects_in_image(self, video_device):
         i = 0
         while i < 5:
-            img = video_device.read()
+            _,img = video_device.read()
             warped = self.courseDetector.find_arena(img)
             if warped is None:
                 return None, None
