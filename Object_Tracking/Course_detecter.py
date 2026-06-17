@@ -40,8 +40,8 @@ class CourseDetector:
     def __find_box_corners_by_hough(self, img_bgr):
         hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
         red = self.__hsv_mask_red(hsv)
-        debug = red.copy()
-        cv2.imwrite("debug_red.png", debug)
+        # debug = red.copy()
+        # cv2.imwrite("debug_red.png", debug)
         
         k = np.ones((7,7), np.uint8)
         red = cv2.morphologyEx(red, cv2.MORPH_CLOSE, k, iterations=2)
@@ -208,8 +208,9 @@ class CourseDetector:
         full_mask = np.zeros((img_h, img_w), dtype=np.uint8)
         full_mask[y0:y1, x0:x1] = cross_mask
 
-        debug_mask = full_mask.copy()
-        cv2.imwrite("debug_mask.png", debug_mask)
+        # debug_mask = full_mask.copy()
+
+        # cv2.imwrite("debug_mask.png", debug_mask)
 
 
         return cross_contour, full_mask
