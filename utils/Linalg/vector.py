@@ -3,40 +3,47 @@ from collections.abc import Sequence
 from typing import Self
 
 
-class Vector2(Sequence[float]):
+class Vector2(Sequence[float]):    
     def __init__(self, x: float, y: float):
         self._arr = np.array([x, y])
+        self._idx = 0
 
     def __add__(self, other: Sequence[float]) -> Self:
         if len(other) != 2:
             raise ValueError("Length of array must be 2")
         
-        return Vector2(np.add(self, other))
+        added = np.add(self, other)
+        return Vector2(added[0], added[1])
     
     def __sub__(self, other: Sequence[float]) -> Self:
         if len(other) != 2:
             raise ValueError("Length of array must be 2")
 
-        return Vector2(np.subtract(self, other))
+        subtracted = np.subtract(self, other)
+        return Vector2(subtracted[0], subtracted[1])
     
     def __mul__(self, scalar: float) -> Self:
-        return Vector2(np.multiply(self._arr, scalar))
+        multiplied = np.multiply(self._arr, scalar)
+        return Vector2(multiplied[0], multiplied[1])
         
     def __neg__(self):
-        return Vector2(0 - self._arr)
-
-    def __iter__(self):
-        iter(self._arr)
-        return self
-
-    def __next__(self):
-        return next(self._arr)
+        negaed = 0 - self._arr
+        return Vector2(negaed[0], negaed[1])
 
     def __len__(self):
         return 2
     
     def __getitem__(self, index: int) -> float:
         return self._arr[index]
+    
+    def __eq__(self, other: Sequence[float]):
+        return len(other) == 2 and self._arr[0] == other[0] and self._arr[1] == other[1]
+
+    def __str__(self):
+        return str(self._arr)
+    
+    def __format__(self, format_spec):
+        return format(self._arr, format_spec)
 
     def rotate(self, angle: float) -> Self:
         """
@@ -48,10 +55,9 @@ class Vector2(Sequence[float]):
         Returns:
             A new rotated vector
         """
-
-        arr = np.matrix([[np.cos(angle), np.sin(angle)],
-                   [-np.sin(angle), np.cos(angle)]]) @ self._arr
-        return Vector2(arr[0], arr[1])
+        rotated = np.array(np.matrix([[np.cos(angle), np.sin(angle)],
+                   [-np.sin(angle), np.cos(angle)]]) @ self._arr)
+        return Vector2(rotated[0][0], rotated[0][1])
 
     @staticmethod
     def dot(a: Sequence[float], b: Sequence[float]) -> float:
@@ -67,8 +73,7 @@ class Vector2(Sequence[float]):
         """
         if len(a) != len(b) or len(a) != 2 or len(b) != 2:
             raise ValueError("Length of arrays must be 2")
-        
-        return a @ b
+        return np.dot(a, b)
 
     @staticmethod
     def project(a: Sequence[float], b: Sequence[float]) -> Self:
@@ -85,7 +90,8 @@ class Vector2(Sequence[float]):
         if len(a) != len(b) or len(a) != 2 or len(b) != 2:
             raise ValueError("Length of arrays must be 2")
 
-        dotProd = Vector2.dot(a, b)/(Vector2.dot(b, b))
+        dotProd = np.dot(a, b)/np.dot(b, b)
+
         return Vector2(b[0]*dotProd, b[1]*dotProd)
 
     @staticmethod
@@ -146,5 +152,6 @@ class Vector2(Sequence[float]):
         """
         The normalized vector
         """
-        return Vector2(self._arr/self.magnitude)
+        normalized = self._arr/self.magnitude
+        return Vector2(normalized[0], normalized[1])
     
