@@ -92,7 +92,11 @@ warped = cv2.arrowedLine(warped, botCoordinates, end_point, (0, 0, 255), 3)
 warped = cv2.arrowedLine(warped, botCoordinates, ballCoordinates, (0, 255, 0), 3)
 
 # draw goal approach point
-warped = cv2.circle(warped, (nav.find_goal_approach_point().x, nav.find_goal_approach_point().y), 10, (0, 0, 255), -1)
+approach, deliver = nav.find_goal_approach_point()
+warped = cv2.circle(warped, approach, 10, (0, 0, 255), -1)
+
+# draw goal delivery point
+warped = cv2.circle(warped, deliver, 10, (0, 0, 255), -1)
 
 # resize and show window with picture: warped
 warped = cv2.resize(warped, (600, 400))

@@ -81,8 +81,8 @@ class Navigation:
         center = Point(self.warp_W / 2, self.warp_H / 2)
         goal_point = Point(self.warp_W - self.buffer, center.y)
         #TODO adjust values to match actual points for delivery (needs testing)
-        approach_point = Point(center, goal_point - self.converter.cm_to_px(30))
-        delivery_point = Point(center, goal_point - self.converter.cm_to_px(20))
+        approach_point = Point(goal_point.x - self.converter.cm_to_px(30), center.y)
+        delivery_point = Point(goal_point.x - self.converter.cm_to_px(20), center.y)
         return approach_point, delivery_point
     
     
