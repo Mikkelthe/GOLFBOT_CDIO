@@ -36,6 +36,9 @@
         },
         "readjustState": {
             "handler": "readjustStateHandler"
+        },
+        "approachDeliveryPointState": {
+            "handler": "approachDeliveryPointStateHandler"
         }
     },
     "stateTransitions": {
@@ -80,7 +83,7 @@
             },
             {
                 "handler": "reachedGoalTransitionHandler",
-                "nextState": "submitBallsState"
+                "nextState": "approachDeliveryPointState"
             }
         ],
         "approachOrangeBallInCornerState": [
@@ -140,6 +143,12 @@
             {
                 "handler": "doneReadjustingTransitionHandler",
                 "nextState": "findNearestBallState"
+            }
+        ],
+        "approachDeliveryPointState": [
+            {
+                "handler": "",
+                "nextState": "submitBallsState"
             }
         ]
     }
