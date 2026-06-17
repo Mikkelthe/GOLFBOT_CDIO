@@ -24,9 +24,10 @@ class FSMFactory:
         golfBot.pos, golfBot.heading = golfBot.objectTracker.find_bot(golfBot.videoDevice.read())
         point = golfBot.currentBall
         movementVector = FSMFactory.findApproachVector(golfBot.pos, golfBot.heading, point)
-        if golfBot.converter.px_to_world_cm(golfBot.navigator.find_distance_between_points(golfBot.pos,point)) > 20:
+        if golfBot.converter.px_to_world_cm(golfBot.navigator.find_distance_between_points(golfBot.pos,point)) > 20 & golfBot.navigator.find_turn(golfBot.heading,golfBot.pos,golfBot.currentBall)[1] < 0.35:
             movementVector = FSMFactory.findApproachVector(golfBot, golfBot.pos, golfBot.heading, point)
             controller.move_dir(movementVector)
+
         controller.move_dir(movementVector)
         return None
     
@@ -59,24 +60,17 @@ class FSMFactory:
     #Should be used for both the orange and whiteball in state corner. Takes currentball and goes to it using corner strategy
     @staticmethod
     def approachCoordinateInCornerStateHandler(controller: Controller, golfBot: GolfBotMemory):
-        # ToDo: go to line in quadrant
-
         ballPoint = golfBot.currentBall
-        pos, angle = golfBot.objectTracker.find_bot(golfBot.videoDevice.read())
-        cornerApproachPoint = Navigation.find_optimal_corner_approach(pos, ballPoint)
+        golfBot.pos, golfBot.heading = golfBot.objectTracker.find_bot(golfBot.videoDevice.read())
+        cornerApproachPoint = Navigation.find_optimal_corner_approach(ballPoint, golfBot.pos)
 
-        # ToDo: go to corner approach point
         if pos == cornerApproachPoint:
             golfBot.goingToCornerLine = False
         if golfBot.goingToCornerLine:
             movementVector = FSMFactory.findApproachVector(golfBot, golfBot.pos, golfBot.heading, cornerApproachPoint)
             controller.move_dir(movementVector)
         else:
-        #consider splitting states to one to get to the corner, then get the ball. How do i split this?
-        # ToDo: go to ball
-            movementVector = FSMFactory.findApproachVector(golfBot, golfBot.pos, golfBot.heading, cornerApproachPoint)
-            controller.move_dir(movementVector)
-            movementVector = golfBot.router.PathToPoint(pos, golfBot.currentBall)
+            movementVector = FSMFactory.findApproachVector(golfBot, golfBot.pos, golfBot.heading, golfBot.currentBall)
             controller.move_dir(movementVector)
         return None
     
