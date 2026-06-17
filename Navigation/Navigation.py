@@ -74,7 +74,8 @@ class Navigation:
             turn_flag = "none"
             turn_angle = 0
 
-        return turn_flag, turn_angle
+        turn_angle_radians = np.deg2rad(turn_angle)
+        return turn_flag, turn_angle_radians
 
     #finds the optimal point to approach the goal (delivery point = 24 cm from goal)
     def find_goal_approach_point(self):

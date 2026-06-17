@@ -84,9 +84,10 @@ class ObjectTracker:
             angle = np.degrees(
                 np.arctan2(heading[1], heading[0])
             )
+            angle_in_radians = np.deg2rad(angle)
         else:
             return None, None
-        return center, angle
+        return center, angle_in_radians
 
     def find_objects_in_image(self, img_bgr, w, h):
         warped = self.courseDetector.find_arena(img_bgr)
