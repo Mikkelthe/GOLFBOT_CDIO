@@ -7,7 +7,8 @@ import numpy as np
 from utils.Linalg.vector import Vector2
 import math
 import cv2
-from Navigation.Navigation import find_bot
+from Navigation.Navigation import Navigation
+from utils.conversion import Conversion
 
 
 # TODO: Use vectors and matricies
@@ -72,6 +73,8 @@ class GolfBotMemory:
         self.forwardDirection = [0, 1] # Direction
         self.objectTracker = ObjectTracker()
         self.courseDetector = CourseDetector()
+        self.navigator = Navigation()
+        self.converter = Conversion()
 
         self.videoDevice = cv2.VideoCapture(1, cv2.CAP_DSHOW)
         self.videoDevice.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
@@ -79,7 +82,7 @@ class GolfBotMemory:
 
         _, img = self.videoDevice.read()
         self.arena = self.courseDetector.find_arena(img)
-        self.cross = 0
+        self.cross = []
         self.goingToCornerLine = False
 
 
