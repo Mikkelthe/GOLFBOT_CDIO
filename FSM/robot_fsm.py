@@ -12,6 +12,7 @@ from pathlib import Path
 class FSMFactory:
     # States
     @staticmethod
+    #done
     def detectBallsStateHandler(controller: Controller, golfBot: GolfBotMemory):
         _, img = golfBot.videoDevice.read()
         golfBot.arena = golfBot.courseDetector.find_arena(img)
@@ -20,6 +21,7 @@ class FSMFactory:
         return None
 
     @staticmethod
+    #done
     def approachPointStateHandler(controller: Controller, golfBot: GolfBotMemory):
         golfBot.pos, golfBot.heading = golfBot.objectTracker.find_bot(golfBot.videoDevice.read())
         point = golfBot.currentBall
@@ -30,7 +32,7 @@ class FSMFactory:
 
         controller.move_dir(movementVector)
         return None
-    
+    #done
     @staticmethod
     def collectOrangeStateHandler(controller: Controller, golfBot: GolfBotMemory):
 
@@ -45,11 +47,11 @@ class FSMFactory:
             else:
                 controller.move_dir(Vector2(-1,0))
         return None
-
+    #done
     @staticmethod
     def checkQuadrantStateHandler(controller: Controller, golfBot: GolfBotMemory):
         return None
-
+    #done
     @staticmethod
     def findNearestStateHandler(controller: Controller, golfBot: GolfBotMemory):
         _, img = golfBot.videoDevice.read()
@@ -60,25 +62,25 @@ class FSMFactory:
     #Should be used for both the orange and whiteball in state corner. Takes currentball and goes to it using corner strategy
     @staticmethod
     def approachCoordinateInCornerStateHandler(controller: Controller, golfBot: GolfBotMemory):
-        ballPoint = golfBot.currentBall
         golfBot.pos, golfBot.heading = golfBot.objectTracker.find_bot(golfBot.videoDevice.read())
-        cornerApproachPoint = Navigation.find_optimal_corner_approach(ballPoint, golfBot.pos)
+        cornerApproachPoint = Navigation.find_optimal_corner_approach(golfBot.currentBall, golfBot.pos)
 
-        if pos == cornerApproachPoint:
+        if golfBot.pos == cornerApproachPoint:
             golfBot.goingToCornerLine = False
+
         if golfBot.goingToCornerLine:
             movementVector = FSMFactory.findApproachVector(golfBot, golfBot.pos, golfBot.heading, cornerApproachPoint)
             controller.move_dir(movementVector)
+
         else:
             movementVector = FSMFactory.findApproachVector(golfBot, golfBot.pos, golfBot.heading, golfBot.currentBall)
             controller.move_dir(movementVector)
+
         return None
     
     @staticmethod
     def readjustStateHandler(controller: Controller, golfBot: GolfBotMemory):
-        # ToDo add nav to readjustment
         controller.move_dir(Vector2(x=0,y=-1))
-
         return None
     
     @staticmethod
@@ -101,13 +103,10 @@ class FSMFactory:
 
     @staticmethod
     def approachNarrowGoalStateHandler(controller: Controller, golfBot: GolfBotMemory):
-        #Find point of goal
-        #ToDo: fix botholeToCenter to correct distance
         _, img = videodevice.read()
         pos, angle = golfBot.objectTracker.find_bot(img)
         golfBot.approachPoint, golfBot.deliveryPoint = golfBot.navigator.find_goal_approach_point()
         golfBot.router.pathToPoint(pos ,golfBot.approachPoint)
-        #ToDo: Nav to x,y
 
         return None
 
@@ -126,18 +125,11 @@ class FSMFactory:
         
     @staticmethod
     def submitBallsStateHandler(controller: Controller, golfBot: GolfBotMemory):
-        #ToDo run Open bothole
-        #ToDo run unstuck function
-        #ToDo consider rechecking for balls in transitiion from SubmitBalls
         controller.turn_off_fan()
         controller.open_door()
         time.sleep(2)
         controller.close_door()
         controller.open_door()
-        return None
-    
-    @staticmethod
-    def readjustStateHandler(controller: Controller, golfBot: GolfBotMemory):
         return None
 
     # Transitions
@@ -259,6 +251,8 @@ class FSMFactory:
 
     @staticmethod
     def doneReadjustingTransitionHandler(golfBot: GolfBotMemory):
+        if golfBot.currentBall in golfBot.whiteBalls:
+            return True
         return False
 
     @staticmethod
