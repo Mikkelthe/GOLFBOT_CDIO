@@ -162,11 +162,15 @@ class ObjectTracker:
         for obj in self.accumulatedPriorityObjects:
             accumulated_priority_objects_list += obj
 
+        # debug reporting
+        # print(f"accumulated_objects_list: {accumulated_objects_list}")
+        # print(f"accumulated_objects_list: {accumulated_priority_objects_list}")
+
         # filtering persistent objects
         self.validObjects = list()
         self.validPriorityObjects = list()
-        for (coord_x,coord_y) in accumulated_objects_list:
-            if (coord_x, coord_y) not in self.validObjects and self.accumulatedObjects.count((coord_x,coord_y)) > 2:
+        for (coord_x, coord_y) in accumulated_objects_list:
+            if (coord_x, coord_y) not in self.validObjects and accumulated_objects_list.count((coord_x,coord_y)) > 2:
                 coord_point = Point(coord_x, coord_y)
                 self.validObjects.append(coord_point)
 
