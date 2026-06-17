@@ -1,31 +1,30 @@
+from Debug.Videoanalysis.VideoAnalysis import videodevice, orange_balls
 from .state import *
 from Object_Tracking.Object_Tracking import ObjectTracker
-from Navigation.Navigation import find_bot, find_optimal_corner_approach, drive_to_point
-from robot_logic.route_planning import route_planner
 from utils.point import Point
 from Navigation.Controller import Controller
 from utils.settings.courtSettings import court_settings
 import json
 import io
+import time
 from pathlib import Path
 
 class FSMFactory:
     # States
     @staticmethod
     def detectBallsStateHandler(controller: Controller, golfBot: GolfBotMemory):
-        #ToDo: Change the find_objects_in_image, to persistant ball finder
-        warp_w = court_settings.image_width
-        warp_h = court_settings.image_height
-        orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, cross_position, _, _, _, _ = golfBot.objectTracker.find_objects_in_image(img,warp_w ,warp_h)
-        golfBot.orangeBalls = orange_balls + dark_orange_balls
-        golfBot.whiteBalls = white_balls + shadowywhite_balls
-        golfBot.cross = cross_position["center"]
         _, img = golfBot.videoDevice.read()
         golfBot.arena = golfBot.courseDetector.find_arena(img)
+        golfBot.currentPos, golfBot.currentHeading = golfBot.objectTracker.find_bot(img)
+        golfBot.whiteBalls, golfBot.orangeBalls, golfBot.cross = golfBot.objectTracker.find_objects_in_image(golfBot.videoDevice)
         return None
 
     @staticmethod
     def approachPointStateHandler(controller: Controller, golfBot: GolfBotMemory):
+        pos, angle = golfBot.objectTracker.find_bot(golfBot.videoDevice.read())
+        point = golfBot.currentBall
+        movementVector = golfBot.router.pathToPoint(pos, point)
+        controller.move_dir(movementVector)
         return None
     
     @staticmethod
@@ -49,42 +48,45 @@ class FSMFactory:
         # Find nearest ball
         route_planner.choose_best_next_ball()
 
+
         return None
 
     #Should be used for both the orange and whiteball in state corner. Takes currentball and goes to it using corner strategy
     @staticmethod
     def approachCoordinateInCornerStateHandler(controller: Controller, golfBot: GolfBotMemory):
         # ToDo: go to line in quadrant
-        
-        x = golfBot.objectTracker.cm_to_px(golfBot.currentBall[0])
-        y = golfBot.objectTracker.cm_to_px(golfBot.currentBall[1])
-        ballPoint = Point(x, y)
-        a, b, c, = find_bot(golfBot.arena)
-        cornerApproachPoint = find_optimal_corner_approach(a, ballPoint)
+
+        ballPoint = golfBot.currentBall
+        pos, angle = golfBot.objectTracker.find_bot(golfBot.videoDevice.read())
+        cornerApproachPoint = Navigation.find_optimal_corner_approach(pos, ballPoint)
 
         # ToDo: go to corner approach point
-        if a == cornerApproachPoint:
+        if pos == cornerApproachPoint:
             golfBot.goingToCornerLine = False
         if golfBot.goingToCornerLine:
-            commands = drive_to_point(cornerApproachPoint)
-            sendCommmands(commands)
+            movementvector = golfBot.router.pathToPoint(pos, cornerApproachPoint)
+            controller.move_dir(movementvector)
         else:
         #consider splitting states to one to get to the corner, then get the ball. How do i split this?
         # ToDo: go to ball
-
-            commands = drive_to_point(golfBot.currentBall)
-            sendCommands(commands)
+            movementVector = golfBot.router.PathToPoint(pos, golfBot.currentBall)
+            controller.move_dir(movementVector)
         return None
     
     @staticmethod
     def readjustStateHandler(controller: Controller, golfBot: GolfBotMemory):
         # ToDo add nav to readjustment
+        controller.move_dir(Vector2(x=-5,y=0))
+
         return None
     
     @staticmethod
     def approachWhiteCoordinateStateHandler(controller: Controller, golfBot: GolfBotMemory):
         #ToDO: Nav to ball
-        nav_to_ball(golfBot.currentBall)
+        pos, angle = golfBot.objectTracker.find_bot(golfBot.videoDevice.read())
+        movementvectors = golfBot.router.pathToPoint(pos, golfBot.currentBall)
+        for vector in movementvectors:
+            controller.move_dir(vector)
         return None
 
     @staticmethod
@@ -99,11 +101,20 @@ class FSMFactory:
     def approachNarrowGoalStateHandler(controller: Controller, golfBot: GolfBotMemory):
         #Find point of goal
         #ToDo: fix botholeToCenter to correct distance
-        botholeToCenter= 20
-        y = court_settings.court_height/2
-        x = court_settings.court_width-botholeToCenter-5
+        _, img = videodevice.read()
+        pos, angle = golfBot.objectTracker.find_bot(img)
+        golfBot.approachPoint, golfBot.deliveryPoint = golfBot.navigator.find_goal_approach_point()
+        golfBot.router.pathToPoint(pos ,golfBot.approachPoint)
         #ToDo: Nav to x,y
 
+        return None
+
+    @staticmethod
+    def approachDeliveryPointStateHandler(controller: Controller, golfBot: GolfBotMemory):
+        _, img = videodevice.read()
+        pos, angle = golfBot.objectTracker.find_bot(img)
+        moveVector = golfBot.router.pathToPoint(pos, golfBot.deliveryPoint)
+        controller.move_dir(moveVector)
         return None
 
     @staticmethod
@@ -116,6 +127,11 @@ class FSMFactory:
         #ToDo run Open bothole
         #ToDo run unstuck function
         #ToDo consider rechecking for balls in transitiion from SubmitBalls
+        controller.turn_off_fan()
+        controller.open_door()
+        time.sleep(2)
+        controller.close_door()
+        controller.open_door()
         return None
     
     @staticmethod
@@ -125,12 +141,17 @@ class FSMFactory:
     # Transitions
     @staticmethod
     def botIsGone(golfBot: GolfBotMemory):
-        if find_bot(golfBot.arena)[0] is None:
+        _, img = videodevice.read()
+        if golfBot.objectTracker.find_bot(img)[0] is None:
             return True
         return False
 
     @staticmethod
     def whiteInQuadrantTransitionHandler(golfbot: GolfBotMemory):
+        _, img = golfbot.videoDevice.read()
+        golfbot.whiteBalls, orangeballs, crosspos = golfbot.objectTracker.find_objects_in_image(golfbot.videoDevice)
+        for ball in golfbot.whiteBalls:
+            FSMFactory.isInQuadrant(golfbot.converter.cm_to_px(ball[0]),golfbot.converter.cm_to_px(ball[0]),golfbot)
         return False
     
     @staticmethod
@@ -139,7 +160,20 @@ class FSMFactory:
 
     @staticmethod
     def reachedGoalTransitionHandler(golfbot: GolfBotMemory):
-        return False
+        _, img = videodevice.read()
+        if golfbot.objectTracker.find_bot(img)[0] == golfbot.deliveryPoint:
+            return True
+        else:
+            return False
+
+    @staticmethod
+    def reachedApproachPointTransitionHandler(golfbot: GolfBotMemory):
+        _, img = videodevice.read()
+        if golfbot.objectTracker.find_bot(img)[0] == golfbot.approachPoint:
+            return True
+        else:
+            return False
+
 
     @staticmethod
     def failedToCollectOrangeTransitionHandler(golfbot: GolfBotMemory):
@@ -189,7 +223,7 @@ class FSMFactory:
     def whiteDetectedTransitionHandler(golfBot: GolfBotMemory):
         whiteBalls = golfBot.whiteBalls
         if len(whiteBalls) > 0:
-            return False
+            return True
         else:
             return False
 
@@ -233,11 +267,11 @@ class FSMFactory:
     def isInQuadrant(x,y,golfBot: GolfBotMemory):
         if x <= golfBot.cross[0] and y < golfBot.cross[1] and golfBot.quadrant == 1:
             return True
-        elif x > golfBot.cross[0] and y <= golfBot.cross[1] and golfBot.quadrant == 1:
+        elif x > golfBot.cross[0] and y <= golfBot.cross[1] and golfBot.quadrant == 2:
             return True
-        elif x >= golfBot.cross[0] and y >= golfBot.cross[1] and golfBot.quadrant == 1:
+        elif x >= golfBot.cross[0] and y >= golfBot.cross[1] and golfBot.quadrant == 3:
             return True
-        elif x <= golfBot.cross[0] and y >= golfBot.cross[1] and golfBot.quadrant == 1:
+        elif x <= golfBot.cross[0] and y >= golfBot.cross[1] and golfBot.quadrant == 4:
             return True
     
     @staticmethod
@@ -254,10 +288,8 @@ class FSMFactory:
 
     @staticmethod
     def currentQuadrant(golfBot: GolfBotMemory):
-        warp_w = court_settings.image_width
-        warp_h = court_settings.image_height
-        position = find_bot(golfBot.arena)
-        x, y = golfBot.objectTracker.px_to_world_cm(position.point[0],position.point[1],warp_w,warp_h)
+        position = golfBot.objectTracker.find_bot(golfBot.arena)
+        x, y = golfBot.converter.px_to_world_cm(position.point[0],position.point[1])
         point = [x,y]
         cross_center = golfBot.cross
 
@@ -297,4 +329,6 @@ class FSMFactory:
                 transitionObjects.append(newTransition)
 
         
-        return StateMachine(GolfBotMemory(None), None, stateObjects[fsm['startState']])
+        return StateMachine(GolfBotMemory(),
+                            Controller(('172.20.10.7', 6853), ('172.20.10.7', 80)),
+                            stateObjects[fsm['startState']])

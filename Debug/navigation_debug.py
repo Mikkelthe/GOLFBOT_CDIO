@@ -2,12 +2,14 @@ import math
 from pathlib import Path
 import cv2
 import numpy as np
-from Navigation import Navigation
-from point import Point
+from Navigation.Navigation import Navigation
+from Object_Tracking.Course_detecter import CourseDetector
+from utils.point import Point
 from Object_Tracking.Object_Tracking import ObjectTracker
 
 nav = Navigation()
 tracker = ObjectTracker()
+course = CourseDetector()
 
 # find and set image folder/files
 base_path = Path(__file__).resolve().parent
@@ -15,21 +17,23 @@ images_folder = base_path.parent / "Images"
 image_files = list(images_folder.glob("*.jpg"))
 
 # load image
-img = cv2.imread("arena.jpg")
+img = cv2.imread("../Navigation/arena.jpg")
 
 # find arena in img and draw on warped
-warped = nav.cd.find_arena(img)
+warped = course.find_arena(img)
 
 # finds all objects in img
-orange_ball, white_ball, dark_orange_balls, shadowywhite_balls, cross_position, a, b, c, d, e, f, g, h = (
-    nav.ot.find_objects_in_image(img, nav.warp_W, nav.warp_H))
+tracker.find_objects_in_image(img, nav.warp_W, nav.warp_H)
+tracker.find_objects_in_image(img, nav.warp_W, nav.warp_H)
+white_ball, orange_ball, cross_position = (tracker.find_objects_in_image(img, nav.warp_W, nav.warp_H))
+
 
 # heading measures from x-axis and goes counter-clockwise
 botCoordinates, currentHeading = tracker.find_bot(warped)
 
 # ball coordinates
-white_x = white_ball[0][0]
-white_y = white_ball[0][1]
+white_x = white_ball[0].x
+white_y = white_ball[0].y
 
 # convert from cm to pixel
 ballCoordinates = nav.converter.world_cm_to_px(white_x, white_y, nav.warp_W, nav.warp_H)
@@ -88,7 +92,11 @@ warped = cv2.arrowedLine(warped, botCoordinates, end_point, (0, 0, 255), 3)
 warped = cv2.arrowedLine(warped, botCoordinates, ballCoordinates, (0, 255, 0), 3)
 
 # draw goal approach point
-warped = cv2.circle(warped, (nav.find_goal_approach_point().x, nav.find_goal_approach_point().y), 10, (0, 0, 255), -1)
+approach, deliver = nav.find_goal_approach_point()
+warped = cv2.circle(warped, approach, 10, (0, 0, 255), -1)
+
+# draw goal delivery point
+warped = cv2.circle(warped, deliver, 10, (0, 0, 255), -1)
 
 # resize and show window with picture: warped
 warped = cv2.resize(warped, (600, 400))

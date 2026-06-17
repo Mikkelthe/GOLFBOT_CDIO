@@ -1,5 +1,6 @@
 from socket import *
 from utils.Linalg.vector import Vector2
+import time
 
 class Controller:
     def __init__(self, robot_host: tuple[str, int], esp32_host: tuple[str,int]):
@@ -33,11 +34,19 @@ class Controller:
 
     def move_dir(self, direction: Vector2):
         command = f"[{direction.x:.3},{direction.y:.3}]".encode("UTF-8")
-
         self.robotSocket.sendto(command, self.robotHost)
+        time.sleep(0.02)
 
     def turn_off_fan(self):
         self.esp32Socket.send(b"OFF")
 
     def turn_on_fan(self):
         self.esp32Socket.send(b"ON")
+
+    def open_door(self):
+        self.esp32Socket.send(b"o")
+        time.sleep(0.02)
+
+    def close_door(self):
+        self.esp32Socket.send(b"p")
+        time.sleep(0.02)
