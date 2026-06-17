@@ -66,10 +66,10 @@ class Navigation:
         delta = (delta_direction + 180) % 360 - 180
         if delta > 0:
             turn_flag = "right"
-            turn_angle = delta  # Degrees to turn
+            turn_angle = abs(delta)  # Degrees to turn
         elif delta < 0:
             turn_flag = "left"
-            turn_angle = -delta  # Absolute value for magnitude
+            turn_angle = abs(delta)  # Absolute value for magnitude
         else:
             turn_flag = "none"
             turn_angle = 0
