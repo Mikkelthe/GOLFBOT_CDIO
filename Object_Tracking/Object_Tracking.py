@@ -88,71 +88,75 @@ class ObjectTracker:
             return None, None
         return center, angle
 
-    def find_objects_in_image(self, img_bgr):
-        warped = self.courseDetector.find_arena(img_bgr)
-        if warped is None:
-            return None, None
+    def find_objects_in_image(self, video_device):
+        i = 0
+        while i < 5:
+            img = video_device.read()
+            warped = self.courseDetector.find_arena(img)
+            if warped is None:
+                return None, None
 
-        dilated = cv2.dilate(warped, np.ones((1,1), np.uint8), iterations=1)
-        blurred = cv2.GaussianBlur(dilated, (7, 7), 0)
-        kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
-        sharpened = cv2.filter2D(blurred, -1, kernel)
+            dilated = cv2.dilate(warped, np.ones((1,1), np.uint8), iterations=1)
+            blurred = cv2.GaussianBlur(dilated, (7, 7), 0)
+            kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+            sharpened = cv2.filter2D(blurred, -1, kernel)
 
-        orange_balls, o_mask, o_center = self.__detect_balls_by_hsv(blurred, lower=(0, 5, 120), upper=(40, 255, 255))
-        unblurred_white_balls, ubw_mask, ubw_center = self.__detect_balls_by_hsv(warped, lower=(0, 0, 240), upper=(180, 110, 255), lower2=(0, 0, 0), upper2=(180, 100, 50))
-        white_balls, w_mask, w_center = self.__detect_balls_by_hsv(blurred, lower=(0, 0, 200), upper=(180, 110, 255))
-        shadowy_white_balls, sw, sw_center = self.__detect_balls_by_hsv(blurred, lower=(0, 0, 115), upper=(180, 100, 250))
-        
-        self.crossPosition = self.courseDetector.find_red_cross_boxes(warped)
+            orange_balls, o_mask, o_center = self.__detect_balls_by_hsv(blurred, lower=(0, 5, 120), upper=(40, 255, 255))
+            unblurred_white_balls, ubw_mask, ubw_center = self.__detect_balls_by_hsv(warped, lower=(0, 0, 240), upper=(180, 110, 255), lower2=(0, 0, 0), upper2=(180, 100, 50))
+            white_balls, w_mask, w_center = self.__detect_balls_by_hsv(blurred, lower=(0, 0, 200), upper=(180, 110, 255))
+            shadowy_white_balls, sw, sw_center = self.__detect_balls_by_hsv(blurred, lower=(0, 0, 115), upper=(180, 100, 250))
 
-        if self.crossPosition is None:
-            print("i failed to find cross_center")
-        else:
-            print(len(self.crossPosition))
-            print(self.crossPosition)
+            self.crossPosition = self.courseDetector.find_red_cross_boxes(warped)
 
-    # Two methods collapsed into one
-    # return orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, self.crossPosition, omask, domask, wmask, sw, wcenter, ocenter, swcenter, docenter
-    # def accumulate_valid_objects(self, wcenter, ocenter, swcenter, docenter):
+            if self.crossPosition is None:
+                print("i failed to find cross_center")
+            else:
+                print(len(self.crossPosition))
+                print(self.crossPosition)
 
-        grouped_objects = w_center.copy()
-        grouped_objects += sw_center.copy()
-        grouped_objects += ubw_center.copy()
-        rounded_objects = list()
-        for (coord_x, coord_y) in grouped_objects:
-            rounded_objects.append((round(coord_x/4, 0)*4, round(coord_y/4, 0)*4))
-        for (coord_x, coord_y) in rounded_objects:
-            if rounded_objects.count((coord_x, coord_y)) > 1:
-                # debug reporting
-                # print(f"Removing {rounded_objects.count((coord_x,coord_y))-1} duplicate objects")
-                rounded_objects.remove((coord_x, coord_y))
+            # Two methods collapsed into one
+            # return orange_balls, white_balls, dark_orange_balls, shadowywhite_balls, self.crossPosition, omask, domask, wmask, sw, wcenter, ocenter, swcenter, docenter
+            # def accumulate_valid_objects(self, wcenter, ocenter, swcenter, docenter):
 
-        grouped_priority_objects = o_center.copy()
-        rounded_priority_objects = list()
-        for (coord_x, coord_y) in grouped_priority_objects:
-            rounded_priority_objects.append((round(coord_x/4, 0)*4, round(coord_y/4, 0)*4))
-        for (coord_x, coord_y) in rounded_priority_objects:
-            if rounded_priority_objects.count((coord_x, coord_y)) > 1:
-                # debug reporting
-                # print(f"Removing {rounded_priority_objects.count((coord_x,coord_y))-1} duplicate vip objects")
-                rounded_priority_objects.remove((coord_x, coord_y))
+            grouped_objects = w_center.copy()
+            grouped_objects += sw_center.copy()
+            grouped_objects += ubw_center.copy()
+            rounded_objects = list()
+            for (coord_x, coord_y) in grouped_objects:
+                rounded_objects.append((round(coord_x/4, 0)*4, round(coord_y/4, 0)*4))
+            for (coord_x, coord_y) in rounded_objects:
+                if rounded_objects.count((coord_x, coord_y)) > 1:
+                    # debug reporting
+                    # print(f"Removing {rounded_objects.count((coord_x,coord_y))-1} duplicate objects")
+                    rounded_objects.remove((coord_x, coord_y))
 
-        # debug reporting
-        # print(f"i found {rounded_objects}. That's {len(rounded_objects)} balls")
-        # print(f"i found {rounded_priority_objects}. That's {len(rounded_vip_objects)} super balls")
+            grouped_priority_objects = o_center.copy()
+            rounded_priority_objects = list()
+            for (coord_x, coord_y) in grouped_priority_objects:
+                rounded_priority_objects.append((round(coord_x/4, 0)*4, round(coord_y/4, 0)*4))
+            for (coord_x, coord_y) in rounded_priority_objects:
+                if rounded_priority_objects.count((coord_x, coord_y)) > 1:
+                    # debug reporting
+                    # print(f"Removing {rounded_priority_objects.count((coord_x,coord_y))-1} duplicate vip objects")
+                    rounded_priority_objects.remove((coord_x, coord_y))
 
-        if len(self.accumulatedObjects) < 5:
-            self.accumulatedObjects.append(rounded_objects)
-        else:
-            self.accumulatedObjects[self.accumulationIndex % 5] = rounded_objects
+            # debug reporting
+            # print(f"i found {rounded_objects}. That's {len(rounded_objects)} balls")
+            # print(f"i found {rounded_priority_objects}. That's {len(rounded_vip_objects)} super balls")
+            if len(self.accumulatedObjects) < 5:
+                self.accumulatedObjects.append(rounded_objects)
+            else:
+                self.accumulatedObjects[self.accumulationIndex % 5] = rounded_objects
 
-        if len(self.accumulatedPriorityObjects) < 5:
-            self.accumulatedPriorityObjects.append(rounded_priority_objects)
-        else:
-            self.accumulatedPriorityObjects[self.accumulationIndex % 5] = rounded_priority_objects
+            if len(self.accumulatedPriorityObjects) < 5:
+                self.accumulatedPriorityObjects.append(rounded_priority_objects)
+            else:
+                self.accumulatedPriorityObjects[self.accumulationIndex % 5] = rounded_priority_objects
 
-        self.accumulationIndex += 1
-        self.accumulationIndex = self.accumulationIndex % 5
+            self.accumulationIndex += 1
+            self.accumulationIndex = self.accumulationIndex % 5
+
+            i += 1
 
         # converting arrays to lists
         accumulated_objects_list = list()

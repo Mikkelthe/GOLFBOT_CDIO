@@ -34,7 +34,7 @@ class Navigation:
         elif cornerPosition.x < self.warp_W / 3 and cornerPosition.y > self.warp_H * 2 / 3:
             b = Point(-1, -1)
         else:
-            raise ValueError("Corner position correct")
+            raise ValueError("Corner position incorrect")
     
     
         relative_vector = Point(botPosition.x - cornerPosition.x,
