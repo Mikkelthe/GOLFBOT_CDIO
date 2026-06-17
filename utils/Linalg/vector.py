@@ -4,12 +4,6 @@ from typing import Self
 
 
 class Vector2(Sequence[float]):
-    def __init__(self, arr: Sequence[float]):
-        if(len(arr) != 2):
-            raise ValueError("Length of array must be 2")
-        
-        self._arr = np.array([arr[0], arr[1]])
-    
     def __init__(self, x: float, y: float):
         self._arr = np.array([x, y])
 
