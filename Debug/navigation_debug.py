@@ -61,7 +61,7 @@ ground_y = int(round(CENTER_POINT_WARP.y + ground_dy))
 # Displace center to find true center from marker
 displacement_in_cm = 4.5
 displacement_in_px = nav.converter.cm_to_px(4.5)
-angle_in_radians = math.radians(currentHeading)
+angle_in_radians = currentHeading
 ground_x = int(round(ground_x + displacement_in_px * math.cos(angle_in_radians)))
 ground_y = int(round(ground_y + displacement_in_px * math.sin(angle_in_radians)))
 
@@ -75,7 +75,7 @@ warped = cv2.circle(warped, botCoordinates, bot_radius, (0, 0, 255), 3)
 # draw bot on warped as rectangle (width=23,5, length=34)
 width_in_px = nav.converter.cm_to_px(23.5)
 length_in_px = nav.converter.cm_to_px(34)
-rect = botCoordinates, (length_in_px, width_in_px), currentHeading
+rect = botCoordinates, (length_in_px, width_in_px), np.rad2deg(currentHeading)
 bot_box = cv2.boxPoints(rect)
 bot_box = bot_box.astype(int)
 cv2.drawContours(warped, [bot_box], 0, (255, 0, 0), 3)
@@ -83,8 +83,8 @@ cv2.drawContours(warped, [bot_box], 0, (255, 0, 0), 3)
 # draw current heading from bot on warped
 arrow_length = 100  # px
 end_point = Point(
-    int(ground_x + arrow_length * np.cos(np.radians(currentHeading))),
-    int(ground_y + arrow_length * np.sin(np.radians(currentHeading)))
+    int(ground_x + arrow_length * np.cos(currentHeading)),
+    int(ground_y + arrow_length * np.sin(currentHeading))
 )
 warped = cv2.arrowedLine(warped, botCoordinates, end_point, (0, 0, 255), 3)
 
