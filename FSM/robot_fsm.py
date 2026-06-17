@@ -26,7 +26,7 @@ class FSMFactory:
         golfBot.pos, golfBot.heading = golfBot.objectTracker.find_bot(golfBot.videoDevice.read())
         point = golfBot.currentBall
         movementVector = FSMFactory.findApproachVector(golfBot.pos, golfBot.heading, point)
-        if golfBot.converter.px_to_world_cm(golfBot.navigator.find_distance_between_points(golfBot.pos,point)) > 20 & golfBot.navigator.find_turn(golfBot.heading,golfBot.pos,golfBot.currentBall)[1] < 0.35:
+        if golfBot.converter.px_to_world_cm(golfBot.navigator.find_distance_between_points(golfBot.pos,point)) > 20 & golfBot.navigator.find_turn(golfBot.heading,golfBot.pos,golfBot.currentBall)[1] < 0.035:
             movementVector = FSMFactory.findApproachVector(golfBot, golfBot.pos, golfBot.heading, point)
             controller.move_dir(movementVector)
 

@@ -5,13 +5,13 @@
             "handler": "detectBallsStateHandler"
         },
         "collectOrangeState": {
-            "handler": "approachPointStateHandler"
+            "handler": "collectOrangeStateHandler"
         },
         "checkQuadrantState": {
             "handler": "checkQuadrantStateHandler"
         },
         "approachNarrowGoalState": {
-            "handler": "approachPointStateHandler"
+            "handler": "approachNarrowGoalStateHandler"
         },
         "approachOrangeBallInCornerState": {
             "handler": "approachCoordinateInCornerStateHandler"
@@ -32,7 +32,7 @@
             "handler": "approachCoordinateInCornerStateHandler"
         },
         "approachWhiteBallCoordinateState": {
-            "handler": "approachPointStateHandler"
+            "handler": "approachWhiteCoordinateStateHandler"
         },
         "readjustState": {
             "handler": "readjustStateHandler"
@@ -73,6 +73,7 @@
             },
             {
                 "handler": "whiteInQuadrantTransitionHandler",
+
                 "nextState": "findNearestBallState"
             }
         ],
@@ -82,7 +83,7 @@
                 "nextState": "avoidObstacleState"
             },
             {
-                "handler": "reachedGoalTransitionHandler",
+                "handler": "reachedApproachPointTransitionHandler",
                 "nextState": "approachDeliveryPointState"
             }
         ],
@@ -147,7 +148,7 @@
         ],
         "approachDeliveryPointState": [
             {
-                "handler": "",
+                "handler": "reachedGoalTransitionHandler",
                 "nextState": "submitBallsState"
             }
         ]
