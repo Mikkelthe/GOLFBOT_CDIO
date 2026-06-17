@@ -12,11 +12,9 @@ class FSMFactory:
     # States
     @staticmethod
     def detectBallsStateHandler(controller: Controller, golfBot: GolfBotMemory):
-        # warp_w = court_settings.image_width
-        # warp_h = court_settings.image_height
         _, img = golfBot.videoDevice.read()
-        golfBot.arena = golfBot.courseDetector.find_arena(img)
-        golfBot.whiteBalls, golfBot.orangeBalls, golfBot.cross = golfBot.objectTracker.find_objects_in_image(img)
+        golfBot.arena = golfBot.courseDetector.find_arena(golfBot.videoDevice)
+        golfBot.whiteBalls, golfBot.orangeBalls, golfBot.cross = golfBot.objectTracker.find_objects_in_image(golfBot.videoDevice)
         return None
 
     @staticmethod
@@ -43,6 +41,7 @@ class FSMFactory:
     def findNearestStateHandler(controller: Controller, golfBot: GolfBotMemory):
         #ToDo closest ball function
 
+
         return None
 
     #Should be used for both the orange and whiteball in state corner. Takes currentball and goes to it using corner strategy
@@ -60,27 +59,29 @@ class FSMFactory:
         if a == cornerApproachPoint:
             golfBot.goingToCornerLine = False
         if golfBot.goingToCornerLine:
-            movementvector = drive_to_point(cornerApproachPoint)
-            sendCommmands(movementvector)
+            movementvector = pathToPoint(cornerApproachPoint)
+            controller.move_dir(movementvector)
         else:
         #consider splitting states to one to get to the corner, then get the ball. How do i split this?
         # ToDo: go to ball
 
             commands = drive_to_point(golfBot.currentBall)
-            sendCommands(commands)
+            controller.move_dir(commands)
         return None
     
     @staticmethod
     def readjustStateHandler(controller: Controller, golfBot: GolfBotMemory):
         # ToDo add nav to readjustment
-        sendCommands(Vector2(x=-1,y=0))
+        controller.move_dir(Vector2(x=-5,y=0))
 
         return None
     
     @staticmethod
     def approachWhiteCoordinateStateHandler(controller: Controller, golfBot: GolfBotMemory):
         #ToDO: Nav to ball
-        nav_to_ball(golfBot.currentBall)
+        movementvectors = pathToPoint(golfBot.currentBall)
+        for vector in movementvectors:
+            controller.move_dir(vector)
         return None
 
     @staticmethod
@@ -185,7 +186,7 @@ class FSMFactory:
     def whiteDetectedTransitionHandler(golfBot: GolfBotMemory):
         whiteBalls = golfBot.whiteBalls
         if len(whiteBalls) > 0:
-            return False
+            return True
         else:
             return False
 
