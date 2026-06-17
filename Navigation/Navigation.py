@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 from pathlib import Path
 from utils.point import *
-from settings.courtSettings import court_settings
+from utils.settings.courtSettings import court_settings
 from utils.conversion import *
 class Navigation:
     def __init__(self):

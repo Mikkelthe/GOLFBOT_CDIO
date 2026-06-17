@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from Navigation.Navigation import Navigation
 from Object_Tracking.Course_detecter import CourseDetector
-from point import Point
+from utils.point import Point
 from Object_Tracking.Object_Tracking import ObjectTracker
 
 nav = Navigation()
