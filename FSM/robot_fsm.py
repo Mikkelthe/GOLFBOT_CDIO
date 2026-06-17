@@ -1,6 +1,7 @@
 from .state import *
 from Object_Tracking.Object_Tracking import ObjectTracker
 from Navigation.Navigation import find_bot, find_optimal_corner_approach, drive_to_point
+from robot_logic.route_planning import route_planner
 from utils.point import Point
 from Navigation.Controller import Controller
 from utils.settings.courtSettings import court_settings
@@ -45,7 +46,8 @@ class FSMFactory:
 
     @staticmethod
     def findNearestStateHandler(controller: Controller, golfBot: GolfBotMemory):
-        #ToDo closest ball function
+        # Find nearest ball
+        route_planner.choose_best_next_ball()
 
         return None
 
