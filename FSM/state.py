@@ -65,7 +65,6 @@ class Transform:
 
 class GolfBotMemory:
     def __init__(self):
-        # TODO: Store more stuff in memory
         self.quadrant = 0
         self.currentBall: Vector2 = None
         self.whiteBalls = []
@@ -80,7 +79,7 @@ class GolfBotMemory:
         self.approachPoint = Point(0,0)
         self.deliveryPoint = Point(0,0)
         self.router = RoutePlanner()
-        self.pos = 0
+        self.pos = Point(0,0)
         self.heading = 0
         self.path = []
 

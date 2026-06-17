@@ -21,7 +21,7 @@ class FSMFactory:
         return None
 
     @staticmethod
-    #done
+    #done, currently unused
     def approachPointStateHandler(controller: Controller, golfBot: GolfBotMemory):
         golfBot.pos, golfBot.heading = golfBot.objectTracker.find_bot(golfBot.videoDevice.read())
         point = golfBot.currentBall
@@ -64,8 +64,8 @@ class FSMFactory:
     def approachCoordinateInCornerStateHandler(controller: Controller, golfBot: GolfBotMemory):
         golfBot.pos, golfBot.heading = golfBot.objectTracker.find_bot(golfBot.videoDevice.read())
         cornerApproachPoint = Navigation.find_optimal_corner_approach(golfBot.currentBall, golfBot.pos)
-
-        if golfBot.pos == cornerApproachPoint:
+        #ToDo Adjust to correct tolerance for approachline
+        if golfBot.converter.px_to_world_cm(golfBot.navigator.find_distance_between_points(golfBot.pos,cornerApproachPoint)) < 2:
             golfBot.goingToCornerLine = False
 
         if golfBot.goingToCornerLine:
@@ -80,7 +80,7 @@ class FSMFactory:
     
     @staticmethod
     def readjustStateHandler(controller: Controller, golfBot: GolfBotMemory):
-        controller.move_dir(Vector2(x=0,y=-1))
+        controller.move_dir(Vector2(x=0,y=-1), notbackwards=False)
         return None
     
     @staticmethod
@@ -104,18 +104,38 @@ class FSMFactory:
     @staticmethod
     def approachNarrowGoalStateHandler(controller: Controller, golfBot: GolfBotMemory):
         _, img = videodevice.read()
-        pos, angle = golfBot.objectTracker.find_bot(img)
-        golfBot.approachPoint, golfBot.deliveryPoint = golfBot.navigator.find_goal_approach_point()
-        golfBot.router.pathToPoint(pos ,golfBot.approachPoint)
-
+        golfBot.pos, golfBot.angle = golfBot.objectTracker.find_bot(img)
+        pointlist = golfBot.router.plan_best_path(golfBot.pos, golfBot.approachPoint, golfBot.cross)
+        point = pointlist[0]
+        flag, angle = golfBot.navigator.find_turn(golfBot.heading, golfBot.pos, golfBot.currentBall)
+        if golfBot.converter.px_to_world_cm(golfBot.navigator.find_distance_between_points(golfBot.pos, point)) > 20 & angle > 0.035:
+            if flag == "right":
+                controller.move_dir(Vector2(x=0.20,y=0))
+            if flag == "left":
+                controller.move_dir(Vector2(x=-0.20,y=0))
+        else:
+            movementVector = FSMFactory.findApproachVector(golfBot.pos, golfBot.heading, point)
+            controller.move_dir(movementVector)
         return None
 
     @staticmethod
     def approachDeliveryPointStateHandler(controller: Controller, golfBot: GolfBotMemory):
         _, img = videodevice.read()
-        pos, angle = golfBot.objectTracker.find_bot(img)
-        moveVector = golfBot.router.pathToPoint(pos, golfBot.deliveryPoint)
-        controller.move_dir(moveVector)
+        golfBot.pos, golfBot.heading = golfBot.objectTracker.find_bot(img)
+        flag, angle = golfBot.navigator.find_turn(golfBot.heading,golfBot.pos,golfBot.deliveryPoint)[0]
+        if angle > 0.010:
+            if flag == "right":
+                controller.move_dir(Vector2(x=0.20,y=0))
+            if flag == "left":
+                controller.move_dir(Vector2(x=-0.20,y=0))
+        else:
+            if golfBot.converter.px_to_world_cm(golfBot.navigator.find_distance_between_points(golfBot.pos, golfBot.deliveryPoint)) > 10:
+                if golfBot.converter.px_to_world_cm(golfBot.navigator.find_distance_between_points(golfBot.pos,golfBot.deliveryPoint)) > 3:
+                    controller.move_dir(Vector2(x=0,y=-0.25), notbackwards=False)
+                else:
+                    controller.move_dir(Vector2(x=0,y=-0.50), notbackwards=False)
+            else:
+                controller.move_dir(Vector2(x=0,y=-1), notbackwards=False)
         return None
 
     @staticmethod
