@@ -88,10 +88,10 @@ class ObjectTracker:
 
             heading = top_right - top_left
 
-            angle = np.degrees(
+            angle = (
                 np.arctan2(heading[1], heading[0])
             )
-            angle_in_radians = np.deg2rad(angle)
+            angle_in_radians = angle
 
             CENTER_POINT_WARP = Point(court_settings.image_width / 2, court_settings.image_height / 2)
             CENTER_POINT_CM = Point(court_settings.court_width / 2, court_settings.court_height / 2)
@@ -99,8 +99,8 @@ class ObjectTracker:
             dx = center.x - CENTER_POINT_WARP.x
             dy = center.y - CENTER_POINT_WARP.y
 
-            ground_dx = dx * scale
-            ground_dy = dy * scale
+            ground_dx = dx*scale
+            ground_dy = dy*scale
 
             ground_x = int(round(CENTER_POINT_WARP.x + ground_dx))
             ground_y = int(round(CENTER_POINT_WARP.y + ground_dy))
@@ -110,14 +110,14 @@ class ObjectTracker:
             displacement_in_px = self.conversion.cm_to_px(4.5)
             ground_x = int(round(ground_x + displacement_in_px * math.cos(angle_in_radians)))
             ground_y = int(round(ground_y + displacement_in_px * math.sin(angle_in_radians)))
-
+            ground_y = 1000-ground_y
             # Update botCoordinates to the ground-projected pixel coordinates (use a Point if you prefer)
             botCoordinates = Point(ground_x, ground_y)
 
             center = botCoordinates
         else:
             return None, None
-        return center, angle_in_radians
+        return center, -angle_in_radians
 
     def find_objects_in_image(self, video_device):
         i = 0
@@ -209,13 +209,13 @@ class ObjectTracker:
         for (coord_x, coord_y) in accumulated_objects_list:
             if (coord_x, coord_y) not in valid_objects and accumulated_objects_list.count((coord_x,coord_y)) > 2:
                 valid_objects.append((coord_x,coord_y))
-                coord_point = Point(self.conversion.cm_to_px(coord_x),self.conversion.cm_to_px(coord_y))
+                coord_point = Point(self.conversion.cm_to_px(coord_x)+100,self.conversion.cm_to_px(coord_y)+100)
                 self.validObjects.append(coord_point)
 
         for (coord_x, coord_y) in accumulated_priority_objects_list:
             if (coord_x, coord_y) not in valid_priority_objects and accumulated_priority_objects_list.count((coord_x,coord_y)) > 2:
                 valid_priority_objects.append((coord_x, coord_y))
-                coord_point = Point(self.conversion.cm_to_px(coord_x),self.conversion.cm_to_px(coord_y))
+                coord_point = Point(self.conversion.cm_to_px(coord_x)+100,self.conversion.cm_to_px(coord_y)+100)
                 self.validPriorityObjects.append(coord_point)
 
         # print(f"{real_objects_list} FINAL LIST {len(real_objects_list)}")

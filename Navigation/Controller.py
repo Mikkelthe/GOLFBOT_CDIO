@@ -5,10 +5,10 @@ import time
 class Controller:
     def __init__(self, robot_host: tuple[str, int], esp32_host: tuple[str,int]):
         self.robotHost = robot_host
-        self.esp32Host = esp32_host
+        #self.esp32Host = esp32_host
         self.robotSocket = socket(AF_INET, SOCK_DGRAM)
-        self.esp32Socket = socket()
-        self.esp32Socket.connect(esp32_host)
+        #self.esp32Socket = socket()
+        #self.esp32Socket.connect(esp32_host)
 
     def move(self, direction: str):
         if direction == 'w':
@@ -33,19 +33,20 @@ class Controller:
             self.robotSocket.sendto(b'h', self.robotHost)
 
     def move_dir(self, direction: Vector2, notbackwards: bool = True):
-        print("i was here")
+        #print("i was here")
         print(direction)
         if direction[1] > 0.2 and notbackwards:
-            print("i was also here")
+            #print("i was also here")
+            direction = Vector2(-direction[0], direction[1])
             command = f"[{direction.x:.3},{direction.y:.3}]".encode("UTF-8")
             self.robotSocket.sendto(command, self.robotHost)
             time.sleep(0.02)
         else:
             if direction[0] < 0:
-                direction = Vector2(-1.01, 0.01)
-            else:
                 direction = Vector2(1.01, 0.01)
-            print(direction)
+            else:
+                direction = Vector2(-1.01, 0.01)
+            #print(direction)
             command = f"[{direction.x:.3},{direction.y:.3}]".encode("UTF-8")
             self.robotSocket.sendto(command, self.robotHost)
             time.sleep(0.03)

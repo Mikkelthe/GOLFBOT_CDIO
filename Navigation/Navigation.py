@@ -50,9 +50,11 @@ class Navigation:
         return optimal_position
     
     #find distance between two points (for example: bot and ball)
-    @staticmethod
-    def find_distance_between_points(point1: Point, point2: Point):
-        return np.sqrt(np.square(point2.x - point1.x) + np.square(point2.y - point1.y))
+
+    def find_distance_between_points(self, point1: Point, point2: Point):
+        x1,y1 = self.converter.px_to_world_cm(point1.x, point1.y)
+        x2,y2 = self.converter.px_to_world_cm(point2.x, point2.y)
+        return np.sqrt(np.square(x2 - x1) + np.square(y2 - y1))
     
     #takes the bots position and heading and a destination point
     #and finds if it is best to turn left or right and by how much
@@ -60,14 +62,14 @@ class Navigation:
     def find_turn(current_heading, point1, point2):
         direction_radian = np.atan2(point2.y - point1.y, point2.x - point1.x)
         target_direction = round(math.degrees(direction_radian))
-        delta_direction = target_direction - current_heading
+        delta_direction = target_direction - math.degrees(current_heading)
 
         # Normalize to [-180, 180]
         delta = (delta_direction + 180) % 360 - 180
-        if delta > 0:
+        if delta < 0:
             turn_flag = "right"
             turn_angle = abs(delta)  # Degrees to turn
-        elif delta < 0:
+        elif delta > 0:
             turn_flag = "left"
             turn_angle = abs(delta)  # Absolute value for magnitude
         else:
