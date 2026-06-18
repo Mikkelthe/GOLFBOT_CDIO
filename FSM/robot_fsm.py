@@ -37,7 +37,7 @@ class FSMFactory:
     def collectOrangeStateHandler(controller: Controller, golfBot: GolfBotMemory):
 
         golfBot.pos, golfBot.heading = golfBot.objectTracker.find_bot(golfBot.videoDevice.read())
-        point = golfBot.currentBall
+        point = golfBot.router.plan_best_path(golfBot.currentBall)[0]
         if golfBot.converter.px_to_world_cm(golfBot.navigator.find_distance_between_points(golfBot.pos,point)) > 20:
             movementVector = FSMFactory.findApproachVector(golfBot, golfBot.pos, golfBot.heading, point)
             controller.move_dir(movementVector)
@@ -86,7 +86,8 @@ class FSMFactory:
     @staticmethod
     def approachWhiteCoordinateStateHandler(controller: Controller, golfBot: GolfBotMemory):
         golfBot.pos, golfBot.heading = golfBot.objectTracker.find_bot(golfBot.videoDevice.read())
-        point = golfBot.currentBall
+
+        point = golfBot.router.plan_best_path(golfBot.currentBall)[0]
         if golfBot.converter.px_to_world_cm(golfBot.navigator.find_distance_between_points(golfBot.pos, point)) > 20:
             movementVector = FSMFactory.findApproachVector(golfBot, golfBot.pos, golfBot.heading, point)
             controller.move_dir(movementVector)
