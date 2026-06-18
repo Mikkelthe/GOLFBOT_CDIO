@@ -1,9 +1,11 @@
 import cv2
 import numpy as np
+
 from utils.conversion import Conversion
 from utils.point import Point
 from utils.settings.courtSettings import court_settings
 from .Course_detecter import CourseDetector
+import math
 
 
 class ObjectTracker:
@@ -60,8 +62,13 @@ class ObjectTracker:
 
         return detections, mask, ballcenter
 
-    @staticmethod
-    def find_bot(image):
+    def find_bot(self, image):
+        image = self.courseDetector.find_arena(image)
+        cam_height_cm = 190
+        bot_height_cm = 45
+
+        scale = (cam_height_cm - bot_height_cm) / cam_height_cm
+
         aruco_dict = cv2.aruco.getPredefinedDictionary(
             cv2.aruco.DICT_4X4_50
         )
@@ -85,6 +92,29 @@ class ObjectTracker:
                 np.arctan2(heading[1], heading[0])
             )
             angle_in_radians = np.deg2rad(angle)
+
+            CENTER_POINT_WARP = Point(court_settings.image_width / 2, court_settings.image_height / 2)
+            CENTER_POINT_CM = Point(court_settings.court_width / 2, court_settings.court_height / 2)
+            #Mikkels quick fix
+            dx = center.x - CENTER_POINT_WARP.x
+            dy = center.y - CENTER_POINT_WARP.y
+
+            ground_dx = dx * scale
+            ground_dy = dy * scale
+
+            ground_x = int(round(CENTER_POINT_WARP.x + ground_dx))
+            ground_y = int(round(CENTER_POINT_WARP.y + ground_dy))
+
+            # Displace center to find true center from marker
+            displacement_in_cm = 4.5
+            displacement_in_px = self.conversion.cm_to_px(4.5)
+            ground_x = int(round(ground_x + displacement_in_px * math.cos(angle_in_radians)))
+            ground_y = int(round(ground_y + displacement_in_px * math.sin(angle_in_radians)))
+
+            # Update botCoordinates to the ground-projected pixel coordinates (use a Point if you prefer)
+            botCoordinates = Point(ground_x, ground_y)
+
+            center = botCoordinates
         else:
             return None, None
         return center, angle_in_radians
