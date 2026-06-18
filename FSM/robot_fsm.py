@@ -103,7 +103,7 @@ class FSMFactory:
         if golfBot.quadrant == 5:
             next_quadrant = 1
         #ToDo: Determine navigation point in next quadrant
-
+        golfBot.quadrant = next_quadrant
         return None
 
     @staticmethod
@@ -287,7 +287,6 @@ class FSMFactory:
     @staticmethod
     def inNewQuadrantTransitionHandler(golfBot: GolfBotMemory):
         if FSMFactory.currentQuadrant(golfBot) != golfBot.quadrant:
-            golfBot.quadrant = FSMFactory.currentQuadrant(golfBot)
             return True
         return False
 
