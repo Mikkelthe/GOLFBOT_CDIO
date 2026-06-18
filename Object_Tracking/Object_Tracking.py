@@ -172,16 +172,20 @@ class ObjectTracker:
         # print(f"accumulated_objects_list: {accumulated_priority_objects_list}")
 
         # filtering persistent objects
+        valid_objects = list()
+        valid_priority_objects = list()
         self.validObjects = list()
         self.validPriorityObjects = list()
         for (coord_x, coord_y) in accumulated_objects_list:
-            if (coord_x, coord_y) not in self.validObjects and accumulated_objects_list.count((coord_x,coord_y)) > 2:
-                coord_point = Point(coord_x, coord_y)
+            if (coord_x, coord_y) not in valid_objects and accumulated_objects_list.count((coord_x,coord_y)) > 2:
+                valid_objects.append((coord_x,coord_y))
+                coord_point = Point(self.conversion.cm_to_px(coord_x),self.conversion.cm_to_px(coord_y))
                 self.validObjects.append(coord_point)
 
         for (coord_x, coord_y) in accumulated_priority_objects_list:
-            if (coord_x, coord_y) not in self.validPriorityObjects and accumulated_priority_objects_list.count((coord_x,coord_y)) > 2:
-                coord_point = Point(coord_x, coord_y)
+            if (coord_x, coord_y) not in valid_priority_objects and accumulated_priority_objects_list.count((coord_x,coord_y)) > 2:
+                valid_priority_objects.append((coord_x, coord_y))
+                coord_point = Point(self.conversion.cm_to_px(coord_x),self.conversion.cm_to_px(coord_y))
                 self.validPriorityObjects.append(coord_point)
 
         # print(f"{real_objects_list} FINAL LIST {len(real_objects_list)}")
