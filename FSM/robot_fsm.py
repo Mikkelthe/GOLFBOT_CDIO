@@ -35,17 +35,15 @@ class FSMFactory:
     def collectOrangeStateHandler(controller: Controller, golfBot: GolfBotMemory):
         _, img = golfBot.videoDevice.read()
         golfBot.pos, golfBot.heading = golfBot.objectTracker.find_bot(img)
-        print(golfBot.pos.x, golfBot.pos.y)
-
+        print("i am in state collect")
         point = golfBot.router.plan_best_path(golfBot.pos, golfBot.currentBall)[1]
-        print(point.x, point.y)
-        print(len(golfBot.orangeBalls))
-        for ball in golfBot.orangeBalls:
-            print(ball.x, ball.y)
-        if golfBot.converter.px_to_world_cm(golfBot.navigator.find_distance_between_points(golfBot.pos, point),0)[0] > 20:
+        print("where i am going: " + str(point.x) + str(point.y))
+        print(golfBot.converter.px_to_world_cm(golfBot.navigator.find_distance_between_points(golfBot.pos, golfBot.currentBall), 0)[0])
+        if golfBot.converter.px_to_world_cm(golfBot.navigator.find_distance_between_points(golfBot.pos, golfBot.currentBall),0)[0] > 20:
             movementVector = FSMFactory.findApproachVector(golfBot, golfBot.pos, golfBot.heading, point)
             controller.move_dir(movementVector)
         else:
+
             if golfBot.navigator.find_turn(golfBot.heading,golfBot.pos,golfBot.currentBall) == "right":
                 controller.move_dir(Vector2(1,0))
             else:
@@ -251,15 +249,15 @@ class FSMFactory:
 
     @staticmethod
     def orangeInCornerTransitionHandler(golfBot: GolfBotMemory):
-        inCorner = FSMFactory.IsInCorner(golfBot.currentBall[0], golfBot.currentBall[1])
-        if golfBot.orangeBalls[0] == golfBot.currentBall & inCorner:
+        inCorner = FSMFactory.IsInCorner(golfBot, golfBot.currentBall[0], golfBot.currentBall[1])
+        if golfBot.orangeBalls[0] == golfBot.currentBall and inCorner:
             golfBot.goingToCornerLine = True
             return True
         return False
 
     @staticmethod
     def orangeCollectedTransitionHandler(golfBot: GolfBotMemory):
-        if golfBot.converter.px_to_world_cm(golfBot.navigator.find_distance_between_points(golfBot.pos, golfBot.currentBall)) > 20 & golfBot.navigator.find_turn(golfBot.heading,golfBot.pos,golfBot.currentBall)[1] < 0.035:
+        if golfBot.converter.px_to_world_cm(golfBot.navigator.find_distance_between_points(golfBot.pos, golfBot.currentBall),0)[0] > 20 and golfBot.navigator.find_turn(golfBot.heading,golfBot.pos,golfBot.currentBall)[1] < 0.035:
             return True
         return False
     

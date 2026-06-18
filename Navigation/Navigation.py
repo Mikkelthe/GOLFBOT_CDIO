@@ -51,7 +51,7 @@ class Navigation:
     
     #find distance between two points (for example: bot and ball)
     @staticmethod
-    def find_distance_between_points(self, point1: Point, point2: Point):
+    def find_distance_between_points(point1: Point, point2: Point):
         return np.sqrt(np.square(point2.x - point1.x) + np.square(point2.y - point1.y))
     
     #takes the bots position and heading and a destination point

@@ -388,7 +388,6 @@ class CourseDetector:
 
         if corners[0] is None:
             return img
-        print(corners)
         M = cv2.getPerspectiveTransform(corners.astype(np.float32), dst)
         warped = cv2.warpPerspective(img, M, (court_settings.image_width, court_settings.image_height))
         return warped
