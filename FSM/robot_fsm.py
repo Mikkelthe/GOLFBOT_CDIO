@@ -170,6 +170,7 @@ class FSMFactory:
     
     @staticmethod
     def obstacleInPathTransitionHandler(golfbot: GolfBotMemory):
+
         return False
 
     @staticmethod
@@ -196,6 +197,8 @@ class FSMFactory:
 
     @staticmethod
     def failedToCollectOrangeTransitionHandler(golfbot: GolfBotMemory):
+        if golfbot.converter.px_to_world_cm(golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.currentBall)) < 16:
+            return True
         return False
 
     @staticmethod
@@ -223,6 +226,8 @@ class FSMFactory:
 
     @staticmethod
     def failedToCollectBallTransitionHandler(golfbot: GolfBotMemory):
+        if golfbot.converter.px_to_world_cm(golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.currentBall)) < 16:
+            return True
         return False
     
     @staticmethod
@@ -283,7 +288,7 @@ class FSMFactory:
 
     @staticmethod
     def doneReadjustingTransitionHandler(golfBot: GolfBotMemory):
-        if golfBot.currentBall in golfBot.whiteBalls:
+        if (golfBot.currentBall in golfBot.whiteBalls) or (golfBot.currentBall in golfBot.orangeBalls):
             return True
         return False
 
