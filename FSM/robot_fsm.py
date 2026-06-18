@@ -85,12 +85,16 @@ class FSMFactory:
     
     @staticmethod
     def approachWhiteCoordinateStateHandler(controller: Controller, golfBot: GolfBotMemory):
-        #ToDO: Nav to ball
-        pos, angle = golfBot.objectTracker.find_bot(golfBot.videoDevice.read())
-        points = golfBot.router.plan_best_path(pos, golfBot.currentBall,golfBot.cross)
-        for point in points:
-
-            controller.move_dir(point)
+        golfBot.pos, golfBot.heading = golfBot.objectTracker.find_bot(golfBot.videoDevice.read())
+        point = golfBot.currentBall
+        if golfBot.converter.px_to_world_cm(golfBot.navigator.find_distance_between_points(golfBot.pos, point)) > 20:
+            movementVector = FSMFactory.findApproachVector(golfBot, golfBot.pos, golfBot.heading, point)
+            controller.move_dir(movementVector)
+        else:
+            if golfBot.navigator.find_turn(golfBot.heading, golfBot.pos, golfBot.currentBall) == "right":
+                controller.move_dir(Vector2(1, 0))
+            else:
+                controller.move_dir(Vector2(-1, 0))
         return None
 
     @staticmethod
@@ -99,6 +103,7 @@ class FSMFactory:
         if golfBot.quadrant == 5:
             next_quadrant = 1
         #ToDo: Determine navigation point in next quadrant
+
         return None
 
     @staticmethod
@@ -114,7 +119,7 @@ class FSMFactory:
             if flag == "left":
                 controller.move_dir(Vector2(x=-0.20,y=0))
         else:
-            movementVector = FSMFactory.findApproachVector(golfBot.pos, golfBot.heading, point)
+            movementVector = FSMFactory.findApproachVector(golfBot, golfBot.pos, golfBot.heading, point)
             controller.move_dir(movementVector)
         return None
 
