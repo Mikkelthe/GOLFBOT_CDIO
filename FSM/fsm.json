@@ -2,105 +2,130 @@
     "startState": "detectBallsState",
     "states": {
         "detectBallsState": {
+            "name": "Detect balls",
             "handler": "detectBallsStateHandler"
         },
         "collectOrangeState": {
+            "name": "Collect orange balls",
             "handler": "approachPointStateHandler"
         },
         "checkQuadrantState": {
+            "name": "Check quadrant",
             "handler": "checkQuadrantStateHandler"
         },
         "approachNarrowGoalState": {
+            "name": "Approach narrow goal",
             "handler": "approachPointStateHandler"
         },
         "approachOrangeBallInCornerState": {
+            "name": "Approach orange in corner",
             "handler": "approachCoordinateInCornerStateHandler"
         },
         "approachNewQuadrantState": {
+            "name": "Approach new quadrant",
             "handler": "approachNewQuadrantStateHandler"
         },
         "avoidObstacleState": {
+            "name": "Avoid obstacle",
             "handler": "avoidObstacleStateHandler"
         },
         "submitBallsState": {
+            "name": "Submit balls",
             "handler": "submitBallsStateHandler"
         },
         "findNearestBallState": {
+            "name": "Find nearest ball",
             "handler": "findNearestStateHandler"
         },
         "approachCoordinateInCornerState": {
+            "name": "Approach corner coordinate",
             "handler": "approachCoordinateInCornerStateHandler"
         },
         "approachWhiteBallCoordinateState": {
+            "name": "Approach white ball coordinate",
             "handler": "approachPointStateHandler"
         },
         "readjustState": {
+            "name": "Readjust",
             "handler": "readjustStateHandler"
         }
     },
     "stateTransitions": {
         "detectBallsState": [
             {
+                "name": "Orange balls > 0",
                 "handler": "orangeDetectedTransitionHandler",
                 "nextState": "collectOrangeState" 
             },
             {
+                "name": "White balls > 0 and Orange balls = 0",
                 "handler": "whiteDetectedTransitionHandler",
                 "nextState": "checkQuadrantState"
             },
             {
+                "name": "Orange balls = 0 and White balls = 0",
                 "handler": "noneDetectedTransitionHandler",
                 "nextState": "approachNarrowGoalState"
             }
         ],
         "collectOrangeState": [
             {
+                "name": "Orange ball collected",
                 "handler": "orangeCollectedTransitionHandler",
                 "nextState": "detectBallsState"
             },
             {
+                "name": "Orange in corner",
                 "handler": "orangeInCornerTransitionHandler",
                 "nextState": "approachOrangeBallInCornerState"
             }
         ],
         "checkQuadrantState": [
             {
+                "name": "White not in quadrant",
                 "handler": "whiteNotInQuadrantTransitionHandler",
                 "nextState": "approachNewQuadrantState"
             },
             {
+                "name": "White in quadrant",
                 "handler": "whiteInQuadrantTransitionHandler",
                 "nextState": "findNearestBallState"
             }
         ],
         "approachNarrowGoalState": [
             {
+                "name": "Obstacle in path",
                 "handler": "obstacleInPathTransitionHandler",
                 "nextState": "avoidObstacleState"
             },
             {
+                "name": "Goal reached",
                 "handler": "reachedGoalTransitionHandler",
                 "nextState": "submitBallsState"
             }
         ],
         "approachOrangeBallInCornerState": [
             {
+                "name": "Orange ball collected",
                 "handler": "orangeCollectedTransitionHandler",
                 "nextState": "detectBallsState"
             },
             {
+                "name": "Failed to collect orange ball",
                 "handler": "failedToCollectOrangeTransitionHandler",
                 "nextState": "collectOrangeState"
             }
         ],
         "approachNewQuadrantState": [
             {
+                "name": "Is in new quadrant",
                 "handler": "inNewQuadrantTransitionHandler",
                 "nextState": "detectBallsState"
             }
         ],
         "avoidObstacleState": [
             {
+                "name": "Obstacle avoided",
                 "handler": "obstacleAvoidedTransitionHandler",
                 "nextState": "approachNarrowGoalState"
             }
@@ -108,36 +133,43 @@
         "submitBallsState": [],
         "findNearestBallState": [
             {
+                "name": "Nearest ball in corner",
                 "handler": "nearestBallInCornerTransitionHandler",
                 "nextState": "approachCoordinateInCornerState"
             },
             {
+                "name": "Nearest ball not in corner",
                 "handler": "nearestBallNotInCornerTransitionHandler",
                 "nextState": "approachWhiteBallCoordinateState"
             }
         ],
         "approachCoordinateInCornerState": [
             {
+                "name": "Ball collected",
                 "handler": "ballCollectedTransitionHandler",
                 "nextState": "checkQuadrantState"
             },
             {
+                "name": "Failed to collect ball",
                 "handler": "failedToCollectBallTransitionHandler",
                 "nextState": "readjustState"
             }
         ],
         "approachWhiteBallCoordinateState": [
             {
+                "name": "Ball collected",
                 "handler": "ballCollectedTransitionHandler",
                 "nextState": "checkQuadrantState"
             },
             {
+                "name": "Failed to collect ball",
                 "handler": "failedToCollectBallTransitionHandler",
                 "nextState": "readjustState"
             }
         ],
         "readjustState": [
             {
+                "name": "Done readjusting",
                 "handler": "doneReadjustingTransitionHandler",
                 "nextState": "findNearestBallState"
             }
