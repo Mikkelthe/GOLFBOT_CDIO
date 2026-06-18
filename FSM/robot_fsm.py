@@ -24,7 +24,7 @@ class FSMFactory:
         golfBot.pos, golfBot.heading = golfBot.objectTracker.find_bot(golfBot.videoDevice.read())
         point = golfBot.currentBall
         movementVector = FSMFactory.findApproachVector(golfBot, golfBot.pos, golfBot.heading, point)
-        if golfBot.converter.px_to_world_cm(golfBot.navigator.find_distance_between_points(golfBot.pos,point)) > 20 & golfBot.navigator.find_turn(golfBot.heading,golfBot.pos,golfBot.currentBall)[1] < 0.035:
+        if golfBot.converter.px_to_world_cm(golfBot.navigator.find_distance_between_points(golfBot.pos,point)) > 20 and golfBot.navigator.find_turn(golfBot.heading,golfBot.pos,golfBot.currentBall)[1] < 0.035:
             movementVector = FSMFactory.findApproachVector(golfBot, golfBot.pos, golfBot.heading, point)
             controller.move_dir(movementVector)
 
@@ -116,7 +116,7 @@ class FSMFactory:
         pointlist = golfBot.router.plan_best_path(golfBot.pos, golfBot.approachPoint, golfBot.cross)
         point = pointlist[0]
         flag, angle = golfBot.navigator.find_turn(golfBot.heading, golfBot.pos, golfBot.currentBall)
-        if golfBot.converter.px_to_world_cm(golfBot.navigator.find_distance_between_points(golfBot.pos, point)) > 20 & angle > 0.035:
+        if golfBot.converter.px_to_world_cm(golfBot.navigator.find_distance_between_points(golfBot.pos, point)) > 20 and angle > 0.035:
             if flag == "right":
                 controller.move_dir(Vector2(x=0.20,y=0))
             if flag == "left":
@@ -197,7 +197,7 @@ class FSMFactory:
         golfbot.pos, golfbot.heading = golfbot.objectTracker.find_bot(img)
         distance = golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.deliveryPoint)
 
-        if distance > 1 & golfbot.navigator.find_turn(golfbot.heading,golfbot.pos,golfbot.currentBall)[1] < 0.35:
+        if distance > 1 and golfbot.navigator.find_turn(golfbot.heading,golfbot.pos,golfbot.currentBall)[1] < 0.35:
             return True
         else:
             return False
@@ -228,7 +228,7 @@ class FSMFactory:
     
     @staticmethod
     def ballCollectedTransitionHandler(golfbot: GolfBotMemory):
-        if golfbot.converter.px_to_world_cm(golfbot.navigator.find_distance_between_points(golfbot.currentBall,golfbot.pos)) < 20 & golfbot.converter.px_to_world_cm(golfbot.navigator.find_distance_between_points(golfbot.currentBall,golfbot.pos)) > 17 & golfbot.navigator.find_turn(golfbot.heading,golfbot.pos,golfbot.currentBall)[1] < 0.035:
+        if golfbot.converter.px_to_world_cm(golfbot.navigator.find_distance_between_points(golfbot.currentBall,golfbot.pos)) < 20 and golfbot.converter.px_to_world_cm(golfbot.navigator.find_distance_between_points(golfbot.currentBall,golfbot.pos)) > 17 and golfbot.navigator.find_turn(golfbot.heading,golfbot.pos,golfbot.currentBall)[1] < 0.035:
             return True
         return False
 
