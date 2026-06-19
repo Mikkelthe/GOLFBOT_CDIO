@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from heapq import heappop, heappush
 from itertools import count
 from math import ceil, floor, hypot, sqrt
@@ -45,10 +46,34 @@ class pathfinder:
             ) from error
 
 
-    def __normalize_obstacles(self, obstacles) -> tuple[tuple[Point, Point, Point, Point], ...]:
-        # normalize optional obstacle input into 4-point polygons
-        if obstacles is None:
-            return ()
+    @staticmethod
+    def __is_corner_like(value) -> bool:
+        # Check whether a value looks like one (x, y) corner.
+        if isinstance(value, Point):
+            return True
+
+        if hasattr(value, "x") and hasattr(value, "y"):
+            return True
+
+        try:
+            value[0]
+            value[1]
+            return len(value) == 2
+        except (TypeError, IndexError, KeyError, ValueError):
+            return False
+
+
+    @staticmethod
+    def __obstacle_items(obstacles) -> tuple:
+        if isinstance(obstacles, Mapping):
+            if "vertical_box" in obstacles or "horizontal_box" in obstacles:
+                return tuple(
+                    obstacles[key]
+                    for key in ("vertical_box", "horizontal_box")
+                    if key in obstacles and obstacles[key] is not None
+                )
+
+            return tuple(obstacles.values())
 
         try:
             obstacle_items = tuple(obstacles)
@@ -56,6 +81,22 @@ class pathfinder:
             raise ValueError(
                 "Invalid obstacles: expected an iterable of 4-corner obstacles or None"
             ) from error
+
+        if (
+            len(obstacle_items) == 4
+            and all(pathfinder.__is_corner_like(corner) for corner in obstacle_items)
+        ):
+            return (obstacle_items,)
+
+        return obstacle_items
+
+
+    def __normalize_obstacles(self, obstacles) -> tuple[tuple[Point, Point, Point, Point], ...]:
+        # normalize optional obstacle input into 4-point polygons
+        if obstacles is None:
+            return ()
+
+        obstacle_items = self.__obstacle_items(obstacles)
 
         normalized = []
         for obstacle_index, obstacle in enumerate(obstacle_items):
