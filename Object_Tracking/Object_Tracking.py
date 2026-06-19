@@ -64,7 +64,7 @@ class ObjectTracker:
 
     def find_bot(self, image):
         image = self.courseDetector.find_arena(image)
-        cam_height_cm = 190
+        cam_height_cm = 187
         bot_height_cm = 45
 
         scale = (cam_height_cm - bot_height_cm) / cam_height_cm
@@ -93,9 +93,10 @@ class ObjectTracker:
             )
             angle_in_radians = angle
 
+            # botCoordinates is a Point returned by find_bot(warped)
+            # center is CENTER_POINT_WARP (Point)
             CENTER_POINT_WARP = Point(court_settings.image_width / 2, court_settings.image_height / 2)
             CENTER_POINT_CM = Point(court_settings.court_width / 2, court_settings.court_height / 2)
-            #Mikkels quick fix
             dx = center.x - CENTER_POINT_WARP.x
             dy = center.y - CENTER_POINT_WARP.y
 
@@ -107,17 +108,17 @@ class ObjectTracker:
 
             # Displace center to find true center from marker
             displacement_in_cm = 4.5
-            displacement_in_px = self.conversion.cm_to_px(4.5)
+            displacement_in_px = self.conversion.cm_to_px(displacement_in_cm)
             ground_x = int(round(ground_x + displacement_in_px * math.cos(angle_in_radians)))
             ground_y = int(round(ground_y + displacement_in_px * math.sin(angle_in_radians)))
-            ground_y = 1000-ground_y
+            #ground_y = 1000-ground_y
             # Update botCoordinates to the ground-projected pixel coordinates (use a Point if you prefer)
             botCoordinates = Point(ground_x, ground_y)
 
             center = botCoordinates
         else:
             return None, None
-        return center, -angle_in_radians
+        return center, angle_in_radians
 
     def find_objects_in_image(self, video_device):
         i = 0
@@ -211,6 +212,7 @@ class ObjectTracker:
                 valid_objects.append((coord_x,coord_y))
                 coord_point = Point(self.conversion.cm_to_px(coord_x)+100,self.conversion.cm_to_px(coord_y)+100)
                 self.validObjects.append(coord_point)
+                print(valid_objects)
 
         for (coord_x, coord_y) in accumulated_priority_objects_list:
             if (coord_x, coord_y) not in valid_priority_objects and accumulated_priority_objects_list.count((coord_x,coord_y)) > 2:
