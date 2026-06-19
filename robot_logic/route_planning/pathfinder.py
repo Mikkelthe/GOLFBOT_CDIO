@@ -216,6 +216,50 @@ class pathfinder:
         return minimum_distance
 
 
+    @staticmethod
+    def __polygon_bounds(polygon: tuple[Point, Point, Point, Point]) -> tuple[float, float, float, float]:
+        return (
+            min(point.x for point in polygon),
+            max(point.x for point in polygon),
+            min(point.y for point in polygon),
+            max(point.y for point in polygon),
+        )
+
+
+    @staticmethod
+    def __point_near_polygon_bounds(
+        point: Point,
+        polygon: tuple[Point, Point, Point, Point],
+        padding: float,
+    ) -> bool:
+        min_x, max_x, min_y, max_y = pathfinder.__polygon_bounds(polygon)
+        return (
+            min_x - padding <= point.x <= max_x + padding
+            and min_y - padding <= point.y <= max_y + padding
+        )
+
+
+    @staticmethod
+    def __segment_near_polygon_bounds(
+        start: Point,
+        end: Point,
+        polygon: tuple[Point, Point, Point, Point],
+        padding: float,
+    ) -> bool:
+        min_x, max_x, min_y, max_y = pathfinder.__polygon_bounds(polygon)
+        segment_min_x = min(start.x, end.x) - padding
+        segment_max_x = max(start.x, end.x) + padding
+        segment_min_y = min(start.y, end.y) - padding
+        segment_max_y = max(start.y, end.y) + padding
+
+        return not (
+            segment_max_x < min_x
+            or segment_min_x > max_x
+            or segment_max_y < min_y
+            or segment_min_y > max_y
+        )
+
+
     def __segments_intersect(
         self,
         first_start: Point,
@@ -307,20 +351,32 @@ class pathfinder:
 
     def __is_blocked_by_obstacles(self, point: Point, obstacles: tuple) -> bool:
         # check whether any obstacle blocks a point
-        return any(
-            self.__point_in_polygon(point, obstacle)
-            or self.__point_to_polygon_distance(point, obstacle) <= ROBOT_RADIUS_CM
-            for obstacle in obstacles
-        )
+        for obstacle in obstacles:
+            if not self.__point_near_polygon_bounds(point, obstacle, ROBOT_RADIUS_CM):
+                continue
+
+            if (
+                self.__point_in_polygon(point, obstacle)
+                or self.__point_to_polygon_distance(point, obstacle) <= ROBOT_RADIUS_CM
+            ):
+                return True
+
+        return False
 
 
     def __is_segment_blocked_by_obstacles(self, start: Point, end: Point, obstacles: tuple) -> bool:
         # check whether a segment intersects any obstacle polygon
-        return any(
-            self.__segment_intersects_polygon(start, end, obstacle)
-            or self.__segment_to_polygon_distance(start, end, obstacle) <= ROBOT_RADIUS_CM
-            for obstacle in obstacles
-        )
+        for obstacle in obstacles:
+            if not self.__segment_near_polygon_bounds(start, end, obstacle, ROBOT_RADIUS_CM):
+                continue
+
+            if (
+                self.__segment_intersects_polygon(start, end, obstacle)
+                or self.__segment_to_polygon_distance(start, end, obstacle) <= ROBOT_RADIUS_CM
+            ):
+                return True
+
+        return False
 
     @staticmethod
     def __make_search_bounds(
@@ -377,14 +433,31 @@ class pathfinder:
         bounds: SearchBounds,
         obstacles: tuple,
         grid_size_cm: float = GRID_SIZE_CM,
+        max_cell: GridCell | None = None,
+        blocked_cell_cache: dict[GridCell, bool] | None = None,
     ) -> bool:
         # check whether a grid cell is outside bounds or blocked.
-        max_x, max_y = self.__grid_limits(bounds, grid_size_cm)
+        if max_cell is None:
+            max_cell = self.__grid_limits(bounds, grid_size_cm)
+
+        max_x, max_y = max_cell
 
         if cell[0] < 0 or cell[0] > max_x or cell[1] < 0 or cell[1] > max_y:
             return True
 
-        return self.__is_blocked_by_obstacles(self.__grid_to_point(cell, bounds, grid_size_cm), obstacles)
+        if blocked_cell_cache is None:
+            return self.__is_blocked_by_obstacles(
+                self.__grid_to_point(cell, bounds, grid_size_cm),
+                obstacles,
+            )
+
+        if cell not in blocked_cell_cache:
+            blocked_cell_cache[cell] = self.__is_blocked_by_obstacles(
+                self.__grid_to_point(cell, bounds, grid_size_cm),
+                obstacles,
+            )
+
+        return blocked_cell_cache[cell]
 
 
     def __is_point_blocked(self, point: Point, obstacles=None) -> bool:
@@ -398,6 +471,8 @@ class pathfinder:
         bounds: SearchBounds,
         obstacles: tuple,
         grid_size_cm: float,
+        max_cell: GridCell,
+        blocked_cell_cache: dict[GridCell, bool],
     ) -> list[tuple[GridCell, float, Direction]]:
         # return reachable neighboring cells with movement costs.
         neighbors = []
@@ -416,7 +491,14 @@ class pathfinder:
         for dx, dy in directions:
             next_cell = (cell[0] + dx, cell[1] + dy)
 
-            if self.__is_cell_blocked(next_cell, bounds, obstacles, grid_size_cm):
+            if self.__is_cell_blocked(
+                next_cell,
+                bounds,
+                obstacles,
+                grid_size_cm,
+                max_cell,
+                blocked_cell_cache,
+            ):
                 continue
 
             next_point = self.__grid_to_point(next_cell, bounds, grid_size_cm)
@@ -462,30 +544,52 @@ class pathfinder:
         grid_size_cm: float = GRID_SIZE_CM,
         turn_penalty_cm: float = TURN_PENALTY_CM,
         search_padding_cm: float = SEARCH_PADDING_CM,
+        normalized_obstacles: tuple | None = None,
     ) -> list[Point]:
         # find a raw grid path from start to target with A*
-        normalized_obstacles = self.__normalize_obstacles(obstacles)
+        if normalized_obstacles is None:
+            normalized_obstacles = self.__normalize_obstacles(obstacles)
+
         bounds = self.__make_search_bounds(start, target, search_padding_cm, grid_size_cm)
+        max_cell = self.__grid_limits(bounds, grid_size_cm)
+        blocked_cell_cache: dict[GridCell, bool] = {}
         start_cell = self.__point_to_grid(start, bounds, grid_size_cm)
         target_cell = self.__point_to_grid(target, bounds, grid_size_cm)
 
-        if self.__is_cell_blocked(start_cell, bounds, normalized_obstacles, grid_size_cm):
+        if self.__is_cell_blocked(
+            start_cell,
+            bounds,
+            normalized_obstacles,
+            grid_size_cm,
+            max_cell,
+            blocked_cell_cache,
+        ):
             return []
 
-        if self.__is_cell_blocked(target_cell, bounds, normalized_obstacles, grid_size_cm):
+        if self.__is_cell_blocked(
+            target_cell,
+            bounds,
+            normalized_obstacles,
+            grid_size_cm,
+            max_cell,
+            blocked_cell_cache,
+        ):
             return []
 
         start_state: PathState = (start_cell, None)
         open_cells = []
         tie_breaker = count()
-        heappush(open_cells, (0.0, next(tie_breaker), start_state))
+        heappush(open_cells, (0.0, next(tie_breaker), 0.0, start_state))
 
         came_from: dict[PathState, PathState] = {}
         best_cost = {start_state: 0.0}
 
         while open_cells:
-            _, _, current_state = heappop(open_cells)
+            _, _, current_cost, current_state = heappop(open_cells)
             current, previous_direction = current_state
+
+            if current_cost > best_cost.get(current_state, float("inf")):
+                continue
 
             if current == target_cell:
                 path = self.__rebuild_path(came_from, start_state, current_state, bounds, grid_size_cm)
@@ -498,6 +602,8 @@ class pathfinder:
                 bounds,
                 normalized_obstacles,
                 grid_size_cm,
+                max_cell,
+                blocked_cell_cache,
             ):
                 turn_cost = 0.0
                 if previous_direction is not None and previous_direction != move_direction:
@@ -510,7 +616,7 @@ class pathfinder:
                     best_cost[next_state] = new_cost
                     priority = new_cost + self.__heuristic(neighbor, target_cell, grid_size_cm)
                     came_from[next_state] = current_state
-                    heappush(open_cells, (priority, next(tie_breaker), next_state))
+                    heappush(open_cells, (priority, next(tie_breaker), new_cost, next_state))
 
         return []
 
@@ -519,10 +625,9 @@ class pathfinder:
         self,
         start: Point,
         end: Point,
-        obstacles=None,
+        normalized_obstacles: tuple,
     ) -> bool:
         # check whether a straight segment avoids all obstacles
-        normalized_obstacles = self.__normalize_obstacles(obstacles)
         return not self.__is_segment_blocked_by_obstacles(start, end, normalized_obstacles)
 
 
@@ -530,10 +635,14 @@ class pathfinder:
         self,
         raw_path: list[Point],
         obstacles=None,
+        normalized_obstacles: tuple | None = None,
     ) -> list[Point]:
         # simplify a path by skipping points with clear line of sight
         if len(raw_path) <= 2:
             return raw_path[:]
+
+        if normalized_obstacles is None:
+            normalized_obstacles = self.__normalize_obstacles(obstacles)
 
         simplified = [raw_path[0]]
         current_index = 0
@@ -542,7 +651,11 @@ class pathfinder:
             next_index = current_index + 1
 
             for candidate_index in range(len(raw_path) - 1, current_index, -1):
-                if self.__path_has_line_of_sight(raw_path[current_index], raw_path[candidate_index], obstacles):
+                if self.__path_has_line_of_sight(
+                    raw_path[current_index],
+                    raw_path[candidate_index],
+                    normalized_obstacles,
+                ):
                     next_index = candidate_index
                     break
 
@@ -562,6 +675,10 @@ class pathfinder:
         search_padding_cm: float = SEARCH_PADDING_CM,
     ) -> list[Point]:
         # plan and smooth a path from start to target
+        normalized_obstacles = self.__normalize_obstacles(obstacles)
+        if not self.__is_segment_blocked_by_obstacles(start, target, normalized_obstacles):
+            return [start, target]
+
         raw_path = self.__plan_path(
             start,
             target,
@@ -569,8 +686,9 @@ class pathfinder:
             grid_size_cm,
             turn_penalty_cm,
             search_padding_cm,
+            normalized_obstacles,
         )
-        return self.__smooth_path(raw_path, obstacles)
+        return self.__smooth_path(raw_path, obstacles, normalized_obstacles)
 
 
     def path_length(

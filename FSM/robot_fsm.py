@@ -39,12 +39,12 @@ class FSMFactory:
         if pos is not None:
             golfBot.pos = pos
             golfBot.heading = heading
-        print("i got here")
         starttime = time.time()
         point = golfBot.router.plan_best_path(golfBot.pos, golfBot.currentBall, golfBot.cross)[1]
         endtime = time.time()
         print(starttime-endtime)
-
+        print("orangeball: " + str(golfBot.currentBall.x) + "," + str(golfBot.currentBall.y))
+        print("pathpoint: " + str(point.x) + "," + str(point.y))
         print ("distance: " + str(golfBot.navigator.find_distance_between_points(golfBot.pos, golfBot.currentBall)))
         if golfBot.navigator.find_distance_between_points(golfBot.pos, golfBot.currentBall) > 20:
             movementVector = FSMFactory.findApproachVector(golfBot, golfBot.pos, golfBot.heading, point)
@@ -335,13 +335,15 @@ class FSMFactory:
     @staticmethod
     def isInQuadrant(x,y,golfBot: GolfBotMemory):
         x,y = golfBot.converter.px_to_world_cm(x,y)
-        if x <= golfBot.cross[0] and y < golfBot.cross[1] and golfBot.quadrant == 1:
+        print(golfBot.cross)
+        cross = golfBot.cross["center"]
+        if x <= cross[0] and y < cross[1] and golfBot.quadrant == 1:
             return True
-        elif x > golfBot.cross[0] and y <= golfBot.cross[1] and golfBot.quadrant == 2:
+        elif x > cross[0] and y <= cross[1] and golfBot.quadrant == 2:
             return True
-        elif x >= golfBot.cross[0] and y >= golfBot.cross[1] and golfBot.quadrant == 3:
+        elif x >= cross[0] and y >= cross[1] and golfBot.quadrant == 3:
             return True
-        elif x <= golfBot.cross[0] and y >= golfBot.cross[1] and golfBot.quadrant == 4:
+        elif x <= cross[0] and y >= cross[1] and golfBot.quadrant == 4:
             return True
     
     @staticmethod
@@ -365,9 +367,9 @@ class FSMFactory:
         if pos is not None:
             golfBot.pos = pos
             golfBot.heading = heading
-        x, y = golfBot.converter.px_to_world_cm(golfBot.pos.point[0],golfBot.pos.point[1])
+        x, y = golfBot.converter.px_to_world_cm(golfBot.pos.x,golfBot.pos.y)
         point = [x,y]
-        cross_center = golfBot.cross[0]
+        cross_center = golfBot.cross["center"]
 
         if point[0] <= cross_center[0] and point[1] < cross_center[1]:
             return 1

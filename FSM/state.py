@@ -79,7 +79,7 @@ class GolfBotMemory:
         self.approachPoint = Point(0,0)
         self.deliveryPoint = Point(0,0)
         self.router = RoutePlanner()
-        self.pos = Point(0,0)
+        self.pos = Point(500,500)
         self.heading = 0
         self.path = []
 
