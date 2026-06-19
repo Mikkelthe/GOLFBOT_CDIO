@@ -5,10 +5,10 @@ import time
 class Controller:
     def __init__(self, robot_host: tuple[str, int], esp32_host: tuple[str,int]):
         self.robotHost = robot_host
-        #self.esp32Host = esp32_host
+        self.esp32Host = esp32_host
         self.robotSocket = socket(AF_INET, SOCK_DGRAM)
-        #self.esp32Socket = socket()
-        #self.esp32Socket.connect(esp32_host)
+        self.esp32Socket = socket()
+        self.esp32Socket.connect(esp32_host)
 
     def move(self, direction: str):
         if direction == 'w':
@@ -40,7 +40,7 @@ class Controller:
             direction = Vector2(-direction[0], direction[1])
             command = f"[{direction.x:.3},{direction.y:.3}]".encode("UTF-8")
             self.robotSocket.sendto(command, self.robotHost)
-            time.sleep(0.02)
+            time.sleep(0.08)
         else:
             if direction[0] < 0:
                 direction = Vector2(1.01, 0.01)
@@ -49,14 +49,17 @@ class Controller:
             #print(direction)
             command = f"[{direction.x:.3},{direction.y:.3}]".encode("UTF-8")
             self.robotSocket.sendto(command, self.robotHost)
-            time.sleep(0.03)
+            time.sleep(0.08)
 
 
     def turn_off_fan(self):
+        self.robotSocket.sendto(b"h", self.robotHost)
         self.esp32Socket.send(b"OFF")
 
     def turn_on_fan(self):
-        self.esp32Socket.send(b"ON")
+        print("\n\n\nI am in the turn on function\n\n\n")
+        self.esp32Socket.send("ON".encode("UTF-8"))
+        self.robotSocket.sendto(b"h", self.robotHost)
 
     def open_door(self):
         self.esp32Socket.send(b"o")

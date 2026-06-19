@@ -5,6 +5,8 @@ from pathlib import Path
 from utils.point import *
 from utils.settings.courtSettings import court_settings
 from utils.conversion import *
+from utils.Linalg.vector import Vector2
+
 class Navigation:
     def __init__(self):
         self.converter = Conversion()
@@ -60,24 +62,23 @@ class Navigation:
     #and finds if it is best to turn left or right and by how much
     @staticmethod
     def find_turn(current_heading, point1, point2):
-        direction_radian = np.atan2(point2.y - point1.y, point2.x - point1.x)
-        target_direction = round(math.degrees(direction_radian))
-        delta_direction = target_direction - math.degrees(current_heading)
+        heading_vec = Vector2(1, 0)
+        heading_vec = heading_vec.rotate(current_heading)
+        target_dir_vec = Vector2(point2.x - point1.x, point2.y - point1.y)
 
-        # Normalize to [-180, 180]
-        delta = (delta_direction + 180) % 360 - 180
-        if delta < 0:
+        direction_radian = Vector2.signedAngle(heading_vec, target_dir_vec)
+        if direction_radian > 0:
             turn_flag = "right"
-            turn_angle = abs(delta)  # Degrees to turn
-        elif delta > 0:
+            turn_angle = abs(direction_radian)  # Degrees to turn
+        elif direction_radian < 0:
             turn_flag = "left"
-            turn_angle = abs(delta)  # Absolute value for magnitude
+            turn_angle = abs(direction_radian)  # Absolute value for magnitude
         else:
             turn_flag = "none"
             turn_angle = 0
 
-        turn_angle_radians = np.deg2rad(turn_angle)
-        return turn_flag, turn_angle_radians
+
+        return turn_flag, turn_angle
 
     #finds the optimal point to approach the goal (delivery point = 24 cm from goal)
     def find_goal_approach_point(self):

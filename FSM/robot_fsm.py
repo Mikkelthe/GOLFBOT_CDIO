@@ -14,7 +14,10 @@ class FSMFactory:
     def detectBallsStateHandler(controller: Controller, golfBot: GolfBotMemory):
         _, img = golfBot.videoDevice.read()
         golfBot.arena = golfBot.courseDetector.find_arena(img)
-        golfBot.pos, golfBot.heading = golfBot.objectTracker.find_bot(img)
+        pos, heading = golfBot.objectTracker.find_bot(img)
+        if pos is not None:
+            golfBot.pos = pos
+            golfBot.heading = heading
         golfBot.whiteBalls, golfBot.orangeBalls, golfBot.cross = golfBot.objectTracker.find_objects_in_image(golfBot.videoDevice)
         print(golfBot.whiteBalls[0])
         return None
@@ -39,22 +42,33 @@ class FSMFactory:
         if pos is not None:
             golfBot.pos = pos
             golfBot.heading = heading
-        starttime = time.time()
-        point = golfBot.router.plan_best_path(golfBot.pos, golfBot.currentBall, golfBot.cross)[1]
-        endtime = time.time()
-        print(starttime-endtime)
-        print("orangeball: " + str(golfBot.currentBall.x) + "," + str(golfBot.currentBall.y))
-        print("pathpoint: " + str(point.x) + "," + str(point.y))
-        print ("distance: " + str(golfBot.navigator.find_distance_between_points(golfBot.pos, golfBot.currentBall)))
-        if golfBot.navigator.find_distance_between_points(golfBot.pos, golfBot.currentBall) > 20:
-            movementVector = FSMFactory.findApproachVector(golfBot, golfBot.pos, golfBot.heading, point)
-            controller.move_dir(movementVector)
+        pointlist = golfBot.router.plan_best_path(golfBot.pos, golfBot.currentBall, golfBot.cross)
+        if len(pointlist) >= 1:
+            golfBot.point = golfBot.router.plan_best_path(golfBot.pos, golfBot.currentBall, golfBot.cross)[1]
+        if golfBot.navigator.find_distance_between_points(golfBot.pos, golfBot.currentBall) < 40 and golfBot.navigator.find_distance_between_points(golfBot.pos, golfBot.currentBall) > 20 :
+            if not golfBot.motorstarted:
+                print("i should turn on")
+                controller.turn_on_fan()
+                golfBot.motorstarted = True
+            movementVector = FSMFactory.findApproachVector(golfBot, golfBot.pos, golfBot.heading, golfBot.point)
+            controller.move_dir(movementVector*0.25)
         else:
-            #controller.turn_on_fan()
-            if golfBot.navigator.find_turn(golfBot.heading,golfBot.pos,golfBot.currentBall)[0] == "right":
-                controller.move_dir(Vector2(-1,0))
+            if golfBot.navigator.find_distance_between_points(golfBot.pos, golfBot.currentBall) > 20:
+                movementVector = FSMFactory.findApproachVector(golfBot, golfBot.pos, golfBot.heading, golfBot.point)
+                controller.move_dir(movementVector)
             else:
-                controller.move_dir(Vector2(1,0))
+
+                flag, angle = golfBot.navigator.find_turn(golfBot.heading, golfBot.pos, golfBot.currentBall)
+                if flag == "right":
+                    if angle > 0.350:
+                        controller.move_dir(Vector2(-1, 0))
+                    else:
+                        controller.move_dir(Vector2(-0.25, 0))
+                else:
+                    if angle > 0.350:
+                        controller.move_dir(Vector2(1,0))
+                    else:
+                        controller.move_dir(Vector2(0.25,0))
         return None
     #done
     @staticmethod
@@ -102,17 +116,31 @@ class FSMFactory:
         if pos is not None:
             golfBot.pos = pos
             golfBot.heading = heading
-
-        point = golfBot.router.plan_best_path(golfBot.currentBall)[0]
-        if golfBot.navigator.find_distance_between_points(golfBot.pos, point) > 20:
-            movementVector = FSMFactory.findApproachVector(golfBot, golfBot.pos, golfBot.heading, point)
-            controller.move_dir(movementVector)
+        pointlist = golfBot.router.plan_best_path(golfBot.pos, golfBot.currentBall, golfBot.cross)
+        if len(pointlist) >= 1:
+            golfBot.point = golfBot.router.plan_best_path(golfBot.pos, golfBot.currentBall, golfBot.cross)[1]
+        if golfBot.navigator.find_distance_between_points(golfBot.pos,
+                                                          golfBot.currentBall) < 40 and golfBot.navigator.find_distance_between_points(
+            golfBot.pos, golfBot.currentBall) > 20:
+            movementVector = FSMFactory.findApproachVector(golfBot, golfBot.pos, golfBot.heading, golfBot.point)
+            controller.move_dir(movementVector * 0.25)
         else:
-            if golfBot.navigator.find_turn(golfBot.heading, golfBot.pos, golfBot.currentBall) == "right":
-                controller.move_dir(Vector2(1, 0))
+            if golfBot.navigator.find_distance_between_points(golfBot.pos, golfBot.currentBall) > 20:
+                movementVector = FSMFactory.findApproachVector(golfBot, golfBot.pos, golfBot.heading, golfBot.point)
+                controller.move_dir(movementVector)
             else:
-                controller.move_dir(Vector2(-1, 0))
-        return None
+
+                flag, angle = golfBot.navigator.find_turn(golfBot.heading, golfBot.pos, golfBot.currentBall)
+                if flag == "right":
+                    if angle > 0.350:
+                        controller.move_dir(Vector2(-1, 0))
+                    else:
+                        controller.move_dir(Vector2(-0.25, 0))
+                else:
+                    if angle > 0.350:
+                        controller.move_dir(Vector2(1, 0))
+                    else:
+                        controller.move_dir(Vector2(0.25, 0))
 
     @staticmethod
     def approachNewQuadrantStateHandler(controller: Controller, golfBot: GolfBotMemory):
@@ -192,8 +220,11 @@ class FSMFactory:
     def whiteInQuadrantTransitionHandler(golfbot: GolfBotMemory):
         _, img = golfbot.videoDevice.read()
         golfbot.whiteBalls, orangeballs, crosspos = golfbot.objectTracker.find_objects_in_image(golfbot.videoDevice)
+        print(golfbot.whiteBalls)
         for ball in golfbot.whiteBalls:
-            FSMFactory.isInQuadrant(golfbot.converter.cm_to_px(ball[0]),golfbot.converter.cm_to_px(ball[0]),golfbot)
+            x,y = golfbot.converter.px_to_world_cm(ball[0],ball[1])
+            print(FSMFactory.isInQuadrant(ball[0],ball[1],golfbot))
+            return FSMFactory.isInQuadrant(ball[0],ball[1],golfbot)
         return False
     
     @staticmethod
@@ -283,7 +314,7 @@ class FSMFactory:
 
     @staticmethod
     def orangeCollectedTransitionHandler(golfBot: GolfBotMemory):
-        if golfBot.navigator.find_distance_between_points(golfBot.pos, golfBot.currentBall) > 20 and golfBot.navigator.find_turn(golfBot.heading,golfBot.pos,golfBot.currentBall)[1] < 0.035:
+        if golfBot.navigator.find_distance_between_points(golfBot.pos, golfBot.currentBall) < 19 and golfBot.navigator.find_turn(golfBot.heading,golfBot.pos,golfBot.currentBall)[1] < 0.35/4:
             return True
         return False
     
@@ -315,6 +346,7 @@ class FSMFactory:
     
     @staticmethod
     def inNewQuadrantTransitionHandler(golfBot: GolfBotMemory):
+        print(len(golfBot.whiteBalls))
         if FSMFactory.currentQuadrant(golfBot) != golfBot.quadrant:
             return True
         return False
@@ -334,9 +366,8 @@ class FSMFactory:
     
     @staticmethod
     def isInQuadrant(x,y,golfBot: GolfBotMemory):
-        x,y = golfBot.converter.px_to_world_cm(x,y)
-        print(golfBot.cross)
         cross = golfBot.cross["center"]
+
         if x <= cross[0] and y < cross[1] and golfBot.quadrant == 1:
             return True
         elif x > cross[0] and y <= cross[1] and golfBot.quadrant == 2:
@@ -345,6 +376,8 @@ class FSMFactory:
             return True
         elif x <= cross[0] and y >= cross[1] and golfBot.quadrant == 4:
             return True
+        else:
+            return False
     
     @staticmethod
     def IsInCorner(golfbot: GolfBotMemory, x,y):
@@ -420,5 +453,5 @@ class FSMFactory:
 
         
         return StateMachine(GolfBotMemory(),
-                            Controller(('10.248.150.144', 6853), ('172.20.10.12', 80)),
+                            Controller(('172.20.10.7', 6853), ('172.20.10.12', 80)),
                             stateObjects[fsm['startState']])

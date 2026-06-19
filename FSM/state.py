@@ -82,6 +82,8 @@ class GolfBotMemory:
         self.pos = Point(500,500)
         self.heading = 0
         self.path = []
+        self.point = Point(0,0)
+        self.motorstarted = False
 
         self.videoDevice = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         self.videoDevice.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
