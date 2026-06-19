@@ -7,7 +7,10 @@ import numpy as np
 from utils.Linalg.vector import Vector2
 import math
 import cv2
-from Navigation.Navigation import find_bot
+from Navigation.Navigation import Navigation
+from utils.conversion import Conversion
+from utils.point import Point
+from robot_logic.route_planning.route_planner import RoutePlanner
 
 
 # TODO: Use vectors and matricies
@@ -62,7 +65,6 @@ class Transform:
 
 class GolfBotMemory:
     def __init__(self):
-        # TODO: Store more stuff in memory
         self.quadrant = 0
         self.currentBall: Vector2 = None
         self.whiteBalls = []
@@ -72,14 +74,22 @@ class GolfBotMemory:
         self.forwardDirection = [0, 1] # Direction
         self.objectTracker = ObjectTracker()
         self.courseDetector = CourseDetector()
+        self.navigator = Navigation()
+        self.converter = Conversion()
+        self.approachPoint = Point(0,0)
+        self.deliveryPoint = Point(0,0)
+        self.router = RoutePlanner()
+        self.pos = Point(0,0)
+        self.heading = 0
+        self.path = []
 
-        self.videoDevice = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+        self.videoDevice = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         self.videoDevice.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
         self.videoDevice.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
         _, img = self.videoDevice.read()
         self.arena = self.courseDetector.find_arena(img)
-        self.cross = 0
+        self.cross = []
         self.goingToCornerLine = False
 
 

@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 from pathlib import Path
 from utils.point import *
-from settings.courtSettings import court_settings
+from utils.settings.courtSettings import court_settings
 from utils.conversion import *
 class Navigation:
     def __init__(self):
@@ -34,7 +34,7 @@ class Navigation:
         elif cornerPosition.x < self.warp_W / 3 and cornerPosition.y > self.warp_H * 2 / 3:
             b = Point(-1, -1)
         else:
-            raise ValueError("Corner position correct")
+            raise ValueError("Corner position incorrect")
     
     
         relative_vector = Point(botPosition.x - cornerPosition.x,
@@ -50,9 +50,11 @@ class Navigation:
         return optimal_position
     
     #find distance between two points (for example: bot and ball)
-    @staticmethod
+
     def find_distance_between_points(self, point1: Point, point2: Point):
-        return np.sqrt(np.square(point2.x - point1.x) + np.square(point2.y - point1.y))
+        x1,y1 = self.converter.px_to_world_cm(point1.x, point1.y)
+        x2,y2 = self.converter.px_to_world_cm(point2.x, point2.y)
+        return np.sqrt(np.square(x2 - x1) + np.square(y2 - y1))
     
     #takes the bots position and heading and a destination point
     #and finds if it is best to turn left or right and by how much
@@ -60,27 +62,31 @@ class Navigation:
     def find_turn(current_heading, point1, point2):
         direction_radian = np.atan2(point2.y - point1.y, point2.x - point1.x)
         target_direction = round(math.degrees(direction_radian))
-        delta_direction = target_direction - current_heading
+        delta_direction = target_direction - math.degrees(current_heading)
 
         # Normalize to [-180, 180]
         delta = (delta_direction + 180) % 360 - 180
-        if delta > 0:
+        if delta < 0:
             turn_flag = "right"
-            turn_angle = delta  # Degrees to turn
-        elif delta < 0:
+            turn_angle = abs(delta)  # Degrees to turn
+        elif delta > 0:
             turn_flag = "left"
-            turn_angle = -delta  # Absolute value for magnitude
+            turn_angle = abs(delta)  # Absolute value for magnitude
         else:
             turn_flag = "none"
             turn_angle = 0
 
-        return turn_flag, turn_angle
+        turn_angle_radians = np.deg2rad(turn_angle)
+        return turn_flag, turn_angle_radians
 
     #finds the optimal point to approach the goal (delivery point = 24 cm from goal)
     def find_goal_approach_point(self):
         center = Point(self.warp_W / 2, self.warp_H / 2)
-        approach_point = Point(self.warp_W - self.buffer, center.y)
-        return approach_point
+        goal_point = Point(self.warp_W - self.buffer, center.y)
+        #TODO adjust values to match actual points for delivery (needs testing)
+        approach_point = Point(goal_point.x - self.converter.cm_to_px(30), center.y)
+        delivery_point = Point(goal_point.x - self.converter.cm_to_px(20), center.y)
+        return approach_point, delivery_point
     
     
     

@@ -7,7 +7,7 @@
         },
         "collectOrangeState": {
             "name": "Collect orange balls",
-            "handler": "approachPointStateHandler"
+            "handler": "collectOrangeStateHandler"
         },
         "checkQuadrantState": {
             "name": "Check quadrant",
@@ -15,7 +15,7 @@
         },
         "approachNarrowGoalState": {
             "name": "Approach narrow goal",
-            "handler": "approachPointStateHandler"
+            "handler": "approachNarrowGoalStateHandler"
         },
         "approachOrangeBallInCornerState": {
             "name": "Approach orange in corner",
@@ -43,11 +43,14 @@
         },
         "approachWhiteBallCoordinateState": {
             "name": "Approach white ball coordinate",
-            "handler": "approachPointStateHandler"
+            "handler": "approachWhiteCoordinateStateHandler"
         },
         "readjustState": {
             "name": "Readjust",
             "handler": "readjustStateHandler"
+        },
+        "approachDeliveryPointState": {
+            "handler": "approachDeliveryPointStateHandler"
         }
     },
     "stateTransitions": {
@@ -89,6 +92,7 @@
             {
                 "name": "White in quadrant",
                 "handler": "whiteInQuadrantTransitionHandler",
+
                 "nextState": "findNearestBallState"
             }
         ],
@@ -100,8 +104,8 @@
             },
             {
                 "name": "Goal reached",
-                "handler": "reachedGoalTransitionHandler",
-                "nextState": "submitBallsState"
+                "handler": "reachedApproachPointTransitionHandler",
+                "nextState": "approachDeliveryPointState"
             }
         ],
         "approachOrangeBallInCornerState": [
@@ -172,6 +176,12 @@
                 "name": "Done readjusting",
                 "handler": "doneReadjustingTransitionHandler",
                 "nextState": "findNearestBallState"
+            }
+        ],
+        "approachDeliveryPointState": [
+            {
+                "handler": "reachedGoalTransitionHandler",
+                "nextState": "submitBallsState"
             }
         ]
     }

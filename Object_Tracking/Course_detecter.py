@@ -40,8 +40,8 @@ class CourseDetector:
     def __find_box_corners_by_hough(self, img_bgr):
         hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
         red = self.__hsv_mask_red(hsv)
-        debug = red.copy()
-        cv2.imwrite("debug_red.png", debug)
+        # debug = red.copy()
+        # cv2.imwrite("debug_red.png", debug)
         
         k = np.ones((7,7), np.uint8)
         red = cv2.morphologyEx(red, cv2.MORPH_CLOSE, k, iterations=2)
@@ -159,7 +159,7 @@ class CourseDetector:
         #cv2.imwrite("debug_middle_roi.png", debug)
 
         hsv = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2HSV)
-        red_mask = self.hsv_mask_red(hsv)
+        red_mask = self.__hsv_mask_red(hsv)
 
         kernel = np.ones((5, 5), np.uint8)
         red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_OPEN, kernel, iterations=1)
@@ -208,8 +208,9 @@ class CourseDetector:
         full_mask = np.zeros((img_h, img_w), dtype=np.uint8)
         full_mask[y0:y1, x0:x1] = cross_mask
 
-        debug_mask = full_mask.copy()
-        cv2.imwrite("debug_mask.png", debug_mask)
+        # debug_mask = full_mask.copy()
+
+        # cv2.imwrite("debug_mask.png", debug_mask)
 
 
         return cross_contour, full_mask
@@ -387,7 +388,6 @@ class CourseDetector:
 
         if corners[0] is None:
             return img
-        print(corners)
         M = cv2.getPerspectiveTransform(corners.astype(np.float32), dst)
         warped = cv2.warpPerspective(img, M, (court_settings.image_width, court_settings.image_height))
         return warped

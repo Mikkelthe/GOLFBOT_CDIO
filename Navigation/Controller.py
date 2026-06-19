@@ -1,13 +1,14 @@
 from socket import *
 from utils.Linalg.vector import Vector2
+import time
 
 class Controller:
     def __init__(self, robot_host: tuple[str, int], esp32_host: tuple[str,int]):
         self.robotHost = robot_host
-        self.esp32Host = esp32_host
+        #self.esp32Host = esp32_host
         self.robotSocket = socket(AF_INET, SOCK_DGRAM)
-        self.esp32Socket = socket()
-        self.esp32Socket.connect(esp32_host)
+        #self.esp32Socket = socket()
+        #self.esp32Socket.connect(esp32_host)
 
     def move(self, direction: str):
         if direction == 'w':
@@ -31,13 +32,36 @@ class Controller:
         else:
             self.robotSocket.sendto(b'h', self.robotHost)
 
-    def move_dir(self, direction: Vector2):
-        command = f"[{direction.x:.3},{direction.y:.3}]".encode("UTF-8")
+    def move_dir(self, direction: Vector2, notbackwards: bool = True):
+        #print("i was here")
+        print(direction)
+        if direction[1] > 0.2 and notbackwards:
+            #print("i was also here")
+            direction = Vector2(-direction[0], direction[1])
+            command = f"[{direction.x:.3},{direction.y:.3}]".encode("UTF-8")
+            self.robotSocket.sendto(command, self.robotHost)
+            time.sleep(0.02)
+        else:
+            if direction[0] < 0:
+                direction = Vector2(1.01, 0.01)
+            else:
+                direction = Vector2(-1.01, 0.01)
+            #print(direction)
+            command = f"[{direction.x:.3},{direction.y:.3}]".encode("UTF-8")
+            self.robotSocket.sendto(command, self.robotHost)
+            time.sleep(0.03)
 
-        self.robotSocket.sendto(command, self.robotHost)
 
     def turn_off_fan(self):
         self.esp32Socket.send(b"OFF")
 
     def turn_on_fan(self):
         self.esp32Socket.send(b"ON")
+
+    def open_door(self):
+        self.esp32Socket.send(b"o")
+        time.sleep(0.02)
+
+    def close_door(self):
+        self.esp32Socket.send(b"p")
+        time.sleep(0.02)
