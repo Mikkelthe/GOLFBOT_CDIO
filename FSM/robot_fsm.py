@@ -38,13 +38,7 @@ class FSMFactory:
         if pos is not None:
             golfBot.pos = pos
             golfBot.heading = heading
-        point = golfBot.currentBall
-        #point = golfBot.router.plan_best_path(golfBot.pos, golfBot.currentBall)[1]
-        #print("\n\n botpos:" + str(golfBot.pos[0]) + str(golfBot.pos[1]) + "       NOT BOTPOS    " + str(golfBot.currentBall[0]) + str(
-            #golfBot.currentBall[1]) + "      Kørselspunkt        " + str(point.x) + str(point.y) + "\n\n")
-
-
-        #print("where i am going: " + str(point.x) + str(point.y))
+        point = golfBot.router.plan_best_path(golfBot.pos, golfBot.currentBall, golfBot.cross)[1]
 
         print ("distance: " + str(golfBot.navigator.find_distance_between_points(golfBot.pos, golfBot.currentBall)))
         if golfBot.navigator.find_distance_between_points(golfBot.pos, golfBot.currentBall) > 20:
@@ -65,7 +59,10 @@ class FSMFactory:
     @staticmethod
     def findNearestStateHandler(controller: Controller, golfBot: GolfBotMemory):
         _, img = golfBot.videoDevice.read()
-        golfBot.pos, golfBot.heading = golfBot.objectTracker.find_bot(img)
+        pos, heading = golfBot.objectTracker.find_bot(img)
+        if pos is not None:
+            golfBot.pos = pos
+            golfBot.heading = heading
         golfBot.currentBall = golfBot.router.choose_best_next_ball(golfBot.pos, golfBot.whiteBalls, golfBot.cross)
         return None
 
