@@ -65,12 +65,14 @@ class Navigation:
         heading_vec = Vector2(1, 0)
         heading_vec = heading_vec.rotate(current_heading)
         target_dir_vec = Vector2(point2.x - point1.x, point2.y - point1.y)
-
+        print("\nrobot position: " + str(point1.x) + ", " + str(point1.y) + "\n")
+        print("\npunkt vi kører efter: " + str(point2.x) + ", " + str(point2.y) + "\n")
         direction_radian = Vector2.signedAngle(heading_vec, target_dir_vec)
-        if direction_radian > 0:
+        print("Direction radian: " + str(direction_radian) + "\n")
+        if direction_radian < 0:
             turn_flag = "right"
             turn_angle = abs(direction_radian)  # Degrees to turn
-        elif direction_radian < 0:
+        elif direction_radian > 0:
             turn_flag = "left"
             turn_angle = abs(direction_radian)  # Absolute value for magnitude
         else:
