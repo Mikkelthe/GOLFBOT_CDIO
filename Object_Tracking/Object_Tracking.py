@@ -83,10 +83,10 @@ class ObjectTracker:
             center = Point(*np.mean(pts, axis=0))
 
             # Marker top edge
-            top_left = pts[0]
-            top_right = pts[1]
+            top_left = pts[3]
+            top_right = pts[2]
 
-            heading = top_right - top_left
+            heading = [top_right[0] - top_left[0],top_left[1] - top_right[1]]
 
             angle = (
                 np.arctan2(heading[1], heading[0])
@@ -117,12 +117,13 @@ class ObjectTracker:
             center = botCoordinates
         else:
             return None, None
-        return center, -angle_in_radians
+        return center, angle_in_radians
 
     def find_objects_in_image(self, video_device):
         i = 0
         while i < 5:
             _,img = video_device.read()
+            cv2.imwrite("Frame.jpg", img)
             warped = self.courseDetector.find_arena(img)
             if warped is None:
                 return None, None
@@ -198,7 +199,7 @@ class ObjectTracker:
             accumulated_priority_objects_list += obj
 
         # debug reporting
-        # print(f"accumulated_objects_list: {accumulated_objects_list}")
+        #print(f"accumulated_objects_list: {accumulated_objects_list}")
         # print(f"accumulated_objects_list: {accumulated_priority_objects_list}")
 
         # filtering persistent objects

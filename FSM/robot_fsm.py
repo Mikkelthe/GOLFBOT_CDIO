@@ -16,6 +16,7 @@ class FSMFactory:
         golfBot.arena = golfBot.courseDetector.find_arena(img)
         golfBot.pos, golfBot.heading = golfBot.objectTracker.find_bot(img)
         golfBot.whiteBalls, golfBot.orangeBalls, golfBot.cross = golfBot.objectTracker.find_objects_in_image(golfBot.videoDevice)
+        print(golfBot.whiteBalls[0])
         return None
 
     @staticmethod
@@ -38,7 +39,11 @@ class FSMFactory:
         if pos is not None:
             golfBot.pos = pos
             golfBot.heading = heading
+        print("i got here")
+        starttime = time.time()
         point = golfBot.router.plan_best_path(golfBot.pos, golfBot.currentBall, golfBot.cross)[1]
+        endtime = time.time()
+        print(starttime-endtime)
 
         print ("distance: " + str(golfBot.navigator.find_distance_between_points(golfBot.pos, golfBot.currentBall)))
         if golfBot.navigator.find_distance_between_points(golfBot.pos, golfBot.currentBall) > 20:
@@ -92,7 +97,11 @@ class FSMFactory:
     
     @staticmethod
     def approachWhiteCoordinateStateHandler(controller: Controller, golfBot: GolfBotMemory):
-        golfBot.pos, golfBot.heading = golfBot.objectTracker.find_bot(golfBot.videoDevice.read())
+        _, img = golfBot.videoDevice.read()
+        pos, heading = golfBot.objectTracker.find_bot(img)
+        if pos is not None:
+            golfBot.pos = pos
+            golfBot.heading = heading
 
         point = golfBot.router.plan_best_path(golfBot.currentBall)[0]
         if golfBot.navigator.find_distance_between_points(golfBot.pos, point) > 20:
@@ -117,7 +126,10 @@ class FSMFactory:
     @staticmethod
     def approachNarrowGoalStateHandler(controller: Controller, golfBot: GolfBotMemory):
         _, img = golfBot.videoDevice.read()
-        golfBot.pos, golfBot.angle = golfBot.objectTracker.find_bot(img)
+        pos, heading = golfBot.objectTracker.find_bot(img)
+        if pos is not None:
+            golfBot.pos = pos
+            golfBot.heading = heading
         pointlist = golfBot.router.plan_best_path(golfBot.pos, golfBot.approachPoint, golfBot.cross)
         point = pointlist[0]
         flag, angle = golfBot.navigator.find_turn(golfBot.heading, golfBot.pos, golfBot.currentBall)
@@ -134,7 +146,10 @@ class FSMFactory:
     @staticmethod
     def approachDeliveryPointStateHandler(controller: Controller, golfBot: GolfBotMemory):
         _, img = golfBot.videoDevice.read()
-        golfBot.pos, golfBot.heading = golfBot.objectTracker.find_bot(img)
+        pos, heading = golfBot.objectTracker.find_bot(img)
+        if pos is not None:
+            golfBot.pos = pos
+            golfBot.heading = heading
         flag, angle = golfBot.navigator.find_turn(golfBot.heading,golfBot.pos,golfBot.deliveryPoint)[0]
         if angle > 0.010:
             if flag == "right":
@@ -189,7 +204,10 @@ class FSMFactory:
     @staticmethod
     def reachedGoalTransitionHandler(golfbot: GolfBotMemory):
         _, img = golfbot.videoDevice.read()
-        golfbot.pos, golfbot.heading = golfbot.objectTracker.find_bot(img)
+        pos, heading = golfbot.objectTracker.find_bot(img)
+        if pos is not None:
+            golfbot.pos = pos
+            golfbot.heading = heading
         distance = golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.deliveryPoint)
         if distance < 1:
             return True
@@ -199,7 +217,10 @@ class FSMFactory:
     @staticmethod
     def reachedApproachPointTransitionHandler(golfbot: GolfBotMemory):
         _, img = golfbot.videoDevice.read()
-        golfbot.pos, golfbot.heading = golfbot.objectTracker.find_bot(img)
+        pos, heading = golfbot.objectTracker.find_bot(img)
+        if pos is not None:
+            golfbot.pos = pos
+            golfbot.heading = heading
         distance = golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.deliveryPoint)
 
         if distance > 1 and golfbot.navigator.find_turn(golfbot.heading,golfbot.pos,golfbot.currentBall)[1] < 0.35:
@@ -339,10 +360,14 @@ class FSMFactory:
 
     @staticmethod
     def currentQuadrant(golfBot: GolfBotMemory):
-        position = golfBot.objectTracker.find_bot(golfBot.arena)
-        x, y = golfBot.converter.px_to_world_cm(position.point[0],position.point[1])
+        _, img = golfBot.videoDevice.read()
+        pos, heading = golfBot.objectTracker.find_bot(img)
+        if pos is not None:
+            golfBot.pos = pos
+            golfBot.heading = heading
+        x, y = golfBot.converter.px_to_world_cm(golfBot.pos.point[0],golfBot.pos.point[1])
         point = [x,y]
-        cross_center = golfBot.cross
+        cross_center = golfBot.cross[0]
 
         if point[0] <= cross_center[0] and point[1] < cross_center[1]:
             return 1
