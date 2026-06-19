@@ -50,6 +50,7 @@
             "handler": "readjustStateHandler"
         },
         "approachDeliveryPointState": {
+            "name": "Approach delivery point",
             "handler": "approachDeliveryPointStateHandler"
         }
     },
@@ -92,7 +93,6 @@
             {
                 "name": "White in quadrant",
                 "handler": "whiteInQuadrantTransitionHandler",
-
                 "nextState": "findNearestBallState"
             }
         ],
@@ -180,6 +180,7 @@
         ],
         "approachDeliveryPointState": [
             {
+                "name": "Goal reached",
                 "handler": "reachedGoalTransitionHandler",
                 "nextState": "submitBallsState"
             }
