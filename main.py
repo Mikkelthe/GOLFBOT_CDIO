@@ -1,5 +1,5 @@
-from FSM.robot_fsm import FSMFactory
+from golfbot.fsm import FSMFactory
 
 if __name__ == "__main__":
-    fsm = FSMFactory().createRobotFSM()
+    fsm = FSMFactory().create_robot_fsm()
     fsm.run()
