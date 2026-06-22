@@ -40,9 +40,7 @@ if __name__ == '__main__':
     # ball coordinates
     white_x = white_ball[0].x
     white_y = white_ball[0].y
-
-    # convert from cm to pixel
-    ballCoordinates = nav.converter.world_cm_to_px(white_x, white_y, nav.warp_W, nav.warp_H)
+    ballCoordinates = (white_x, white_y)
 
     bot_radius = nav.converter.cm_to_px(17.5, warp_w_px=nav.warp_W, warp_h_px=nav.warp_H)
     bot_circle = (botCoordinates, bot_radius)
@@ -52,7 +50,7 @@ if __name__ == '__main__':
     # draw bot on warped as rectangle (width=23,5, length=34)
     width_in_px = nav.converter.cm_to_px(23.5)
     length_in_px = nav.converter.cm_to_px(34)
-    rect = botCoordinates, (length_in_px, width_in_px), np.rad2deg(currentHeading) ###ÆNDRE DENNE, ER ALLEREDE RADIANER
+    rect = botCoordinates, (length_in_px, width_in_px), np.rad2deg(currentHeading)
     bot_box = cv2.boxPoints(rect)
     bot_box = bot_box.astype(int)
     cv2.drawContours(warped, [bot_box], 0, (255, 0, 0), 3)
