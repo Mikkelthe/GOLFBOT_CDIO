@@ -18,7 +18,6 @@ class FSMFactory:
         golfbot.updateTransform()
         controller.move_dir(Vector2(0, 0))
         golfbot.whiteBalls, golfbot.orangeBalls, golfbot.cross = golfbot.objectTracker.find_objects_in_image(golfbot.videoDevice)
-        print(golfbot.whiteBalls[0])
         return None
 
     @staticmethod
@@ -40,6 +39,7 @@ class FSMFactory:
     @staticmethod
     def collect_orange_state_handler(controller: Controller, golfbot: GolfBotMemory):
         golfbot.updateTransform()
+        print(golfbot.currentBall.x)
         pointlist = golfbot.router.plan_best_path(golfbot.pos, golfbot.currentBall, golfbot.cross)
         if len(pointlist) >= 1:
             golfbot.point = golfbot.router.plan_best_path(golfbot.pos, golfbot.currentBall, golfbot.cross)[1]
@@ -55,7 +55,7 @@ class FSMFactory:
                 movement_vector = FSMFactory.find_approach_vector(golfbot, golfbot.point)
                 controller.move_dir(movement_vector)
             else:
-                turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.currentBall)
+                turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.point)
                 turn_vector = Vector2(FSMFactory.adjust_vector(turn_vector).x, 0)
                 controller.move_dir(turn_vector)
         return None
@@ -68,6 +68,8 @@ class FSMFactory:
     def find_nearest_state_handler(controller: Controller, golfbot: GolfBotMemory):
         golfbot.updateTransform()
         golfbot.currentBall = golfbot.router.choose_best_next_ball(golfbot.pos, golfbot.whiteBalls, golfbot.cross)
+        if golfbot.currentBall is None:
+            print("hygge")
         return None
 
     #Should be used for both the orange and white ball in state corner. Takes current ball and goes to it using corner strategy
@@ -111,7 +113,7 @@ class FSMFactory:
                 movement_vector = FSMFactory.find_approach_vector(golfbot, golfbot.point)
                 controller.move_dir(movement_vector)
             else:
-                turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.currentBall)
+                turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.point)
                 turn_vector = Vector2(FSMFactory.adjust_vector(turn_vector).x, 0)
                 controller.move_dir(turn_vector)
         return None
@@ -182,10 +184,7 @@ class FSMFactory:
     def white_in_quadrant_transition_handler(golfbot: GolfBotMemory) -> bool:
         _, img = golfbot.videoDevice.read()
         golfbot.whiteBalls, orange_balls, cross_pos = golfbot.objectTracker.find_objects_in_image(golfbot.videoDevice)
-        print(golfbot.whiteBalls)
         for ball in golfbot.whiteBalls:
-            _,_ = golfbot.converter.px_to_world_cm(ball[0],ball[1])
-            print(FSMFactory.is_in_quadrant(ball[0], ball[1], golfbot))
             return FSMFactory.is_in_quadrant(ball[0], ball[1], golfbot)
         return False
     
@@ -239,8 +238,11 @@ class FSMFactory:
     @staticmethod
     def ball_collected_transition_handler(golfbot: GolfBotMemory) -> bool:
         turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.currentBall)
-        if 20 > golfbot.navigator.find_distance_between_points(golfbot.currentBall, golfbot.pos) > 17 and abs(turn_vector.x) < 0.17 and turn_vector.y > 0:
+        #extra if things   - - - - - - and abs(turn_vector.x) < 0.37 and turn_vector.y > 0
+        if 19 > golfbot.navigator.find_distance_between_points(golfbot.currentBall, golfbot.pos):
+
             return True
+
         return False
 
     @staticmethod
@@ -327,7 +329,7 @@ class FSMFactory:
         elif x <= cross[0] and y >= cross[1] and golfbot.quadrant == 4:
             return True
         else:
-            return False
+            return True
     
     @staticmethod
     def is_in_corner(golfbot: GolfBotMemory, x: int, y: int) -> bool:

@@ -2,6 +2,8 @@ from collections.abc import Mapping
 from heapq import heappop, heappush
 from itertools import count
 from math import ceil, floor, hypot, sqrt
+from golfbot.utils import Conversion
+import numpy as np
 
 from utils import Point
 
@@ -18,9 +20,46 @@ SearchBounds = tuple[float, float, float, float]
 class Pathfinder:
     def __init__(self):
         # create a pathfinder instance
+        self.converter = Conversion()
         pass
 
 
+    def circle_intersections_np(self, p1, p2, c, radius):
+        c1 = np.array([p1.x, p1.y], dtype=float)
+        c2 = np.array([p2.x, p2.y], dtype=float)
+
+        diff = c2 - c1
+        d = np.linalg.norm(diff)
+
+        if d == 0:
+            return []
+
+        if d > 2 * radius:
+            return []
+
+        midpoint = (c1 + c2) / 2
+
+        h_squared = radius ** 2 - (d / 2) ** 2
+
+        if h_squared < 0:
+            h_squared = 0
+
+        h = np.sqrt(h_squared)
+
+        direction = diff / d
+        perpendicular = np.array([-direction[1], direction[0]])
+
+        intersection1 = midpoint + h * perpendicular
+        intersection2 = midpoint - h * perpendicular
+        bestpoint = Point(0, 0)
+        lentomiddle = 0
+        for intersection in [intersection1, intersection2]:
+            templen = np.sqrt(np.square(c.x - intersection[0]) + np.square(c.y - intersection[1]))
+            if templen > lentomiddle:
+                bestpoint = intersection
+                lentomiddle = templen
+        x,y = self.converter.world_cm_to_px(bestpoint[0],bestpoint[1])
+        return Point(x,y)
 
     @staticmethod
     def __distance(point_a: Point, point_b: Point) -> float:
@@ -574,7 +613,30 @@ class Pathfinder:
             max_cell,
             blocked_cell_cache,
         ):
-            return []
+            vdistance = 20000000
+            vpoint = Point(0, 0)
+            for obstacle in obstacles["vertical_box"]:
+                temp = Point(obstacle[0], obstacle[1])
+                tempdistance = np.sqrt(np.square(target_cell[0] - temp.x) + np.square(target_cell[1] - temp.y))
+                if tempdistance < vdistance:
+                    vdistance = tempdistance
+                    vpoint = temp
+
+            hdistance = 20000000
+            hpoint = Point(0, 0)
+            for obstacle in obstacles["horizontal_box"]:
+                temp = Point(obstacle[0], obstacle[1])
+                tempdistance = np.sqrt(np.square(target_cell[0] - temp.x) + np.square(target_cell[1] - temp.y))
+                if tempdistance < hdistance:
+                    hdistance = tempdistance
+                    hpoint = temp
+
+            radius = 20.0
+            crosscenter = obstacles["center"][0]
+            intersectionpoint = self.circle_intersections_np(vpoint, hpoint,
+                                                                        crosscenter, radius)
+            target_cell = (intersectionpoint.x, intersectionpoint.y)
+            print("abc")
 
         start_state: PathState = (start_cell, None)
         open_cells = []

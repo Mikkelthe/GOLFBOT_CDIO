@@ -387,7 +387,7 @@ class CourseDetector:
         return {
             "vertical_box": boxes[0],
             "horizontal_box": boxes[1],
-            "center": center,
+            "center": [center],
         }
 
     def find_arena(self, img):

@@ -49,9 +49,9 @@ class Controller:
             time.sleep(0.08)
         else:
             if direction[0] < 0:
-                direction = Vector2(1.01, 0.01)
+                direction = Vector2(0.5, 0.0)
             else:
-                direction = Vector2(-1.01, 0.01)
+                direction = Vector2(-0.5, 0.0)
             #print(direction)
             command = f"[{direction.x:.3},{direction.y:.3}]".encode("UTF-8")
             self.robotSocket.sendto(command, self.robotHost)

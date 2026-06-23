@@ -70,7 +70,7 @@ class GolfBotMemory:
         self.deliveryPoint = Point(0, 0)
         self.router = RoutePlanner()
         self.path = []
-        self.point = Point(0, 0)
+        self.point = Point(500, 300)
         self.motorStarted = False
 
         self.videoDevice = None

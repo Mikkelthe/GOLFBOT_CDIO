@@ -43,6 +43,7 @@ class StateMachine:
                 if transition.conditionHandler(self.memory):
                     self.currentState = transition.stateTo
                     print(f"Switched state: condition handler {transition.conditionHandler.__name__}")
+                    self.controller.move_dir(Vector2(0.0,0.0))
                     break
             if debug and self.memory.videoDevice:
                 _, img = self.memory.videoDevice.read()

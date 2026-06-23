@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from collections.abc import Mapping
 from math import hypot, isinf
-
+import numpy as np
 from utils import Point, Conversion
 from ._pathfinder import Pathfinder
 
@@ -58,19 +58,25 @@ class RoutePlanner:
         return Point(x_px, y_px)
 
 
-    def __obstacle_to_world_cm(self, obstacle):
+    def __obstacle_to_world_cm(self, obstacle: dict):
         return tuple(self.__to_world_cm(self.__as_point(corner)) for corner in obstacle)
 
+    import numpy as np
 
-    def __obstacles_to_world_cm(self, obstacles):
+
+    def __obstacles_to_world_cm(self, obstacles: dict):
         if obstacles is None:
             return None
 
         if isinstance(obstacles, Mapping):
+            obstacles["top"] = [[0,0],[1500,0],[0,105],[1500,105]]
+            obstacles["left_side"] = [[0,0],[0,1000],[105,0],[105,1000]]
+            obstacles["right_side"] = [[1500,0],[1500,1000],[1395,0],[1395,1000]]
+            obstacles["bottom"] = [[0,1000],[1500,1000],[0,895],[1500,895]]
             if "vertical_box" in obstacles or "horizontal_box" in obstacles:
                 return {
                     key: self.__obstacle_to_world_cm(obstacles[key])
-                    for key in ("vertical_box", "horizontal_box")
+                    for key in ("vertical_box", "horizontal_box","center","top","left_side","right_side","bottom")
                     if key in obstacles and obstacles[key] is not None
                 }
 
@@ -122,8 +128,29 @@ class RoutePlanner:
 
             cost = self.__path_cost(robot_point, ball_point, world_obstacles)
             if isinf(cost):
-                continue
+                vdistance = 20000000
+                vpoint = Point(0, 0)
+                for obstacle in obstacles["vertical_box"]:
+                    temp = Point(obstacle[0],obstacle[1])
+                    tempdistance = np.sqrt(np.square(ball_point.x - temp.x) + np.square(ball_point.y - temp.y))
+                    if tempdistance < vdistance:
+                        vdistance = tempdistance
+                        vpoint = temp
 
+                hdistance = 20000000
+                hpoint = Point(0,0)
+                for obstacle in obstacles["horizontal_box"]:
+                    temp = Point(obstacle[0],obstacle[1])
+                    tempdistance = np.sqrt(np.square(ball_point.x - temp.x) + np.square(ball_point.y - temp.y))
+                    if tempdistance < hdistance:
+                        hdistance = tempdistance
+                        hpoint = temp
+
+                radius = 20.0
+                crosscenter = obstacles["center"]
+                intersectionpoint = self.pathfinder.circle_intersections_np(self.pathfinder,vpoint, hpoint, Point(crosscenter[0],crosscenter[1]), radius)
+
+                cost = self.__path_cost(robot_point, intersectionpoint, world_obstacles)
             score = (
                 cost,
                 straight_distance,
@@ -132,7 +159,8 @@ class RoutePlanner:
             if score < best_score:
                 best_score = score
                 best_ball = ball
-
+        if best_ball is None:
+            print("in function choose_best_next_ball")
         return best_ball
 
 
