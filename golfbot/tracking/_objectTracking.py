@@ -208,13 +208,15 @@ class ObjectTracker:
         for (coord_x, coord_y) in accumulated_objects_list:
             if (coord_x, coord_y) not in valid_objects and accumulated_objects_list.count((coord_x,coord_y)) > 2:
                 valid_objects.append((coord_x,coord_y))
-                coord_point = Point(self.conversion.cm_to_px(coord_x)+100,self.conversion.cm_to_px(coord_y)+100)
+                coord_x_px, coord_y_px = self.conversion.world_cm_to_px(coord_x, coord_y)
+                coord_point = Point(coord_x_px, coord_y_px)
                 self.validObjects.append(coord_point)
 
         for (coord_x, coord_y) in accumulated_priority_objects_list:
             if (coord_x, coord_y) not in valid_priority_objects and accumulated_priority_objects_list.count((coord_x,coord_y)) > 2:
                 valid_priority_objects.append((coord_x, coord_y))
-                coord_point = Point(self.conversion.cm_to_px(coord_x)+100,self.conversion.cm_to_px(coord_y)+100)
+                coord_x_px, coord_y_px = self.conversion.world_cm_to_px(coord_x, coord_y)
+                coord_point = Point(coord_x_px, coord_y_px)
                 self.validPriorityObjects.append(coord_point)
 
         # print(f"{real_objects_list} FINAL LIST {len(real_objects_list)}")
