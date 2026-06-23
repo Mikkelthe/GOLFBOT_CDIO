@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import math
 
-from utils import Conversion, Point
+from utils import Conversion, Point, Angle
 from utils.settings import court_settings
 from ._courseDetector import CourseDetector
 

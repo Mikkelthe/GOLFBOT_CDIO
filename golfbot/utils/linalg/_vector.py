@@ -97,7 +97,7 @@ class Vector2(Sequence[float]):
         return Vector2(b[0]*dot_prod, b[1]*dot_prod)
 
     @staticmethod
-    def unsignedAngle(a: Sequence[float], b: Sequence[float]) -> float:
+    def unsignedAngle(a: Sequence[float], b: Sequence[float]) -> Angle:
         """
         Calculates the unsigned angle between 2 vectors in radians
 
@@ -113,10 +113,10 @@ class Vector2(Sequence[float]):
 
         vec_a = Vector2(a[0], a[1])
         vec_b = Vector2(b[0], b[1])
-        return np.arccos(Vector2.dot(vec_a, vec_b)/(vec_a.magnitude*vec_b.magnitude))
+        return Angle(np.arccos(Vector2.dot(vec_a, vec_b)/(vec_a.magnitude*vec_b.magnitude)))
         
     @staticmethod
-    def signedAngle(a: Sequence[float], b: Sequence[float]) -> float:
+    def signedAngle(a: Sequence[float], b: Sequence[float]) -> Angle:
         """
         Calculates the signed angle between 2 vectors in radians
 
@@ -130,9 +130,9 @@ class Vector2(Sequence[float]):
         if len(a) != len(b) or len(a) != 2 or len(b) != 2:
             raise ValueError("Length of arrays must be 2")
         
-        return np.atan2(
+        return Angle(np.atan2(
             a[0]*b[1] - a[1]*b[0],
-            a[0]*b[0] + a[1]*b[1])
+            a[0]*b[0] + a[1]*b[1]))
     
     @property
     def x(self) -> float:

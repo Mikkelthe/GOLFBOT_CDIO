@@ -1,8 +1,8 @@
 import math
 
 class Angle:
-    def __init__(self):
-        self._angleRad = 0.0
+    def __init__(self, valueRad = 0.0):
+        self._angleRad = valueRad
 
     def __str__(self):
         return f"{self.radians}"

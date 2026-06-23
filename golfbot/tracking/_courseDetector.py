@@ -93,9 +93,9 @@ class CourseDetector:
         for rho, theta in vertical:
             x = CourseDetector.__x_at_y(rho, theta, y_mid)
             if x is not None:
-                if x < vxs_left[0]:
+                if x > vxs_left[0]:
                     vxs_left = (x, rho, theta)
-                if x > vxs_right[0]:
+                if x < vxs_right[0]:
                     vxs_right = (x, rho, theta)
         left = vxs_left[1], vxs_left[2]
         right = vxs_right[1], vxs_right[2]
@@ -107,9 +107,9 @@ class CourseDetector:
         for rho, theta in horizontal:
             y = CourseDetector.__y_at_x(rho, theta, x_mid)
             if y is not None:
-                if y < hys_top[0]:
+                if y > hys_top[0]:
                     hys_top = (y, rho, theta)
-                if y > hys_bottom[0]:
+                if y < hys_bottom[0]:
                     hys_bottom = (y, rho, theta)
         top = hys_top[1], hys_top[2]
         bottom = hys_bottom[1], hys_bottom[2]

@@ -74,6 +74,16 @@ class Navigation:
 
 
         return turn_flag, turn_angle
+    
+    def find_turn_2(current_heading: Angle, robot_pos: Point, target_pos: Point):
+        heading_vec = Vector2(1, 0).rotate(current_heading)
+        target_dir_vec = Vector2(target_pos.x - robot_pos.x, target_pos.y - robot_pos.y)
+
+        # Rotate both vectors by 90 degrees 
+
+        angle = Vector2.signedAngle(heading_vec, target_dir_vec)
+
+        return Vector2(0, 1).rotate(angle)
 
     #finds the optimal point to approach the goal (delivery point = 24 cm from goal)
     def find_goal_approach_point(self):

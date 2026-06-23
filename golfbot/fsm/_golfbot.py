@@ -117,4 +117,4 @@ class GolfBotMemory:
         point, angle = self.objectTracker.find_bot(img)
         if point and angle:
             self._transform.position = Vector2(point.x, point.y)
-            self._transform.rotation = math.radians(angle)
+            self._transform.rotation = Angle(angle)
