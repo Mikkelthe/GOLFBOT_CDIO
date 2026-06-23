@@ -82,7 +82,7 @@ class Navigation:
         print(f"Robot point: {robot_pos.x}, {robot_pos.y}")
         print(f"Target point: {target_pos.x}, {target_pos.y}")
 
-        target_dir_vec = Vector2(target_pos.x - robot_pos.x, target_pos.y - robot_pos.y).normalized
+        target_dir_vec = Vector2(target_pos.x - robot_pos.x, -(target_pos.y - robot_pos.y)).normalized
         print("target dir: " + str(target_dir_vec))
         angle = Vector2.signedAngle(target_dir_vec, heading_vec)
         print("Angle: " + str(angle))

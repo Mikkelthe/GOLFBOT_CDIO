@@ -99,9 +99,11 @@ class FSMFactory:
         pointlist = golfbot.router.plan_best_path(golfbot.pos, golfbot.currentBall, golfbot.cross)
         if len(pointlist) >= 1:
             golfbot.point = golfbot.router.plan_best_path(golfbot.pos, golfbot.currentBall, golfbot.cross)[1]
-        if golfbot.navigator.find_distance_between_points(golfbot.pos,
-                                                          golfbot.currentBall) < 40 and golfbot.navigator.find_distance_between_points(
-            golfbot.pos, golfbot.currentBall) > 20:
+        if 40 > golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.currentBall) > 20:
+            if not golfbot.motorStarted:
+                print("i should turn on")
+                controller.turn_on_fan()
+                golfbot.motorStarted = True
             movement_vector = FSMFactory.find_approach_vector(golfbot, golfbot.point)
             controller.move_dir(movement_vector * 0.25)
         else:
@@ -112,6 +114,7 @@ class FSMFactory:
                 turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.currentBall)
                 turn_vector = Vector2(FSMFactory.adjust_vector(turn_vector).x, 0)
                 controller.move_dir(turn_vector)
+        return None
 
     @staticmethod
     def approach_new_quadrant_state_handler(controller: Controller, golfbot: GolfBotMemory):
