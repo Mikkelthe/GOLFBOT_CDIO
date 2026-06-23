@@ -29,8 +29,7 @@ if __name__ == '__main__':
             print("Could not read frame from camera")
             break
 
-
-        vis = frame.copy()
+        vis = courseDetector.find_arena(frame.copy())
 
         dilated = cv2.dilate(vis, np.ones((3,3), np.uint8), iterations=1)
         blurred = cv2.GaussianBlur(vis, (5,5),0)

@@ -2,7 +2,7 @@ from __future__ import annotations
 import numpy as np
 import math
 from collections.abc import Sequence
-from utils import Angle
+from golfbot.utils import Angle
 
 
 class Vector2(Sequence[float]):

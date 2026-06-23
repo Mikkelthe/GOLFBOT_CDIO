@@ -1,13 +1,14 @@
 import json
 import io
 import time
+import math
 from pathlib import Path
 from navigation import Controller
 from ._golfbot import GolfBotMemory
 from ._state import State, Transition, StateMachine
 from utils.settings import court_settings
 from utils.linalg import Vector2
-from utils import Point
+from utils import Point, Angle
 
 class FSMFactory:
     # States
@@ -15,6 +16,7 @@ class FSMFactory:
     #done
     def detect_balls_state_handler(controller: Controller, golfbot: GolfBotMemory):
         golfbot.updateTransform()
+        controller.move_dir(Vector2(0, 0))
         golfbot.whiteBalls, golfbot.orangeBalls, golfbot.cross = golfbot.objectTracker.find_objects_in_image(golfbot.videoDevice)
         print(golfbot.whiteBalls[0])
         return None
@@ -26,11 +28,13 @@ class FSMFactory:
         point = golfbot.currentBall
         if not point:
             return None
-        movement_vector = FSMFactory.find_approach_vector(golfbot, point)
-        if golfbot.navigator.find_distance_between_points(golfbot.pos,point) > 20 and golfbot.navigator.find_turn(golfbot.heading,golfbot.pos,golfbot.currentBall)[1] < 0.035:
-            controller.move_dir(movement_vector)
-
+        movement_vector = FSMFactory.adjust_vector(FSMFactory.find_approach_vector(golfbot, point))
+        #turn_vector = golfbot.navigator.find_turn_2(golfbot.heading,golfbot.pos,golfbot.currentBall)
         controller.move_dir(movement_vector)
+        #if golfbot.navigator.find_distance_between_points(golfbot.pos,point) > 20 and abs(turn_vector.x) < 0.035 and turn_vector.y > 0:
+        #    controller.move_dir(movement_vector)
+        #else:
+        #   controller.move_dir(FSMFactory.adjust_vector(movement_vector))
         return None
     #done
     @staticmethod
@@ -51,18 +55,9 @@ class FSMFactory:
                 movement_vector = FSMFactory.find_approach_vector(golfbot, golfbot.point)
                 controller.move_dir(movement_vector)
             else:
-
-                flag, angle = golfbot.navigator.find_turn(golfbot.heading, golfbot.pos, golfbot.currentBall)
-                if flag == "right":
-                    if angle > 0.350:
-                        controller.move_dir(Vector2(-1, 0))
-                    else:
-                        controller.move_dir(Vector2(-0.25, 0))
-                else:
-                    if angle > 0.350:
-                        controller.move_dir(Vector2(1,0))
-                    else:
-                        controller.move_dir(Vector2(0.25,0))
+                turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.currentBall)
+                turn_vector = Vector2(FSMFactory.adjust_vector(turn_vector).x, 0)
+                controller.move_dir(turn_vector)
         return None
     #done
     @staticmethod
@@ -114,18 +109,9 @@ class FSMFactory:
                 movement_vector = FSMFactory.find_approach_vector(golfbot, golfbot.point)
                 controller.move_dir(movement_vector)
             else:
-
-                flag, angle = golfbot.navigator.find_turn(golfbot.heading, golfbot.pos, golfbot.currentBall)
-                if flag == "right":
-                    if angle > 0.350:
-                        controller.move_dir(Vector2(-1, 0))
-                    else:
-                        controller.move_dir(Vector2(-0.25, 0))
-                else:
-                    if angle > 0.350:
-                        controller.move_dir(Vector2(1, 0))
-                    else:
-                        controller.move_dir(Vector2(0.25, 0))
+                turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.currentBall)
+                turn_vector = Vector2(FSMFactory.adjust_vector(turn_vector).x, 0)
+                controller.move_dir(turn_vector)
 
     @staticmethod
     def approach_new_quadrant_state_handler(controller: Controller, golfbot: GolfBotMemory):
@@ -141,12 +127,10 @@ class FSMFactory:
         golfbot.updateTransform()
         pointlist = golfbot.router.plan_best_path(golfbot.pos, golfbot.approachPoint, golfbot.cross)
         point = pointlist[0]
-        flag, angle = golfbot.navigator.find_turn(golfbot.heading, golfbot.pos, golfbot.currentBall)
-        if golfbot.navigator.find_distance_between_points(golfbot.pos, point) > 20 and angle > 0.035:
-            if flag == "right":
-                controller.move_dir(Vector2(x=0.20,y=0))
-            if flag == "left":
-                controller.move_dir(Vector2(x=-0.20,y=0))
+        turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.currentBall)
+        if golfbot.navigator.find_distance_between_points(golfbot.pos, point) > 20 and abs(turn_vector.x) > 0.035 and turn_vector.y > 0:
+            turn_vector = Vector2(FSMFactory.adjust_vector(turn_vector).x*0.2, 0)
+            controller.move_dir(turn_vector)
         else:
             movement_vector = FSMFactory.find_approach_vector(golfbot, point)
             controller.move_dir(movement_vector)
@@ -155,12 +139,10 @@ class FSMFactory:
     @staticmethod
     def approach_delivery_point_state_handler(controller: Controller, golfbot: GolfBotMemory):
         golfbot.updateTransform()
-        flag, angle = golfbot.navigator.find_turn(golfbot.heading, golfbot.pos, golfbot.deliveryPoint)[0]
-        if angle > 0.010:
-            if flag == "right":
-                controller.move_dir(Vector2(x=0.20,y=0))
-            if flag == "left":
-                controller.move_dir(Vector2(x=-0.20,y=0))
+        turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.currentBall)
+        if abs(turn_vector.x) > 0.010:
+            turn_vector = Vector2(FSMFactory.adjust_vector(turn_vector).x*0.2, 0)
+            controller.move_dir(turn_vector)
         else:
             if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.deliveryPoint) > 10:
                 if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.deliveryPoint) > 3:
@@ -221,8 +203,8 @@ class FSMFactory:
     def reached_approach_point_transition_handler(golfbot: GolfBotMemory) -> bool:
         golfbot.updateTransform()
         distance = golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.deliveryPoint)
-
-        if distance > 1 and golfbot.navigator.find_turn(golfbot.heading,golfbot.pos,golfbot.currentBall)[1] < 0.35:
+        turn_vector = golfbot.navigator.find_turn_2(golfbot.heading,golfbot.pos,golfbot.currentBall)
+        if distance > 1 and abs(turn_vector.x) < 0.35 and turn_vector.y > 0:
             return True
         else:
             return False
@@ -253,7 +235,8 @@ class FSMFactory:
     
     @staticmethod
     def ball_collected_transition_handler(golfbot: GolfBotMemory) -> bool:
-        if 20 > golfbot.navigator.find_distance_between_points(golfbot.currentBall, golfbot.pos) > 17 and golfbot.navigator.find_turn(golfbot.heading, golfbot.pos, golfbot.currentBall)[1] < 0.17:
+        turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.currentBall)
+        if 20 > golfbot.navigator.find_distance_between_points(golfbot.currentBall, golfbot.pos) > 17 and abs(turn_vector.x) < 0.17 and turn_vector.y > 0:
             return True
         return False
 
@@ -284,7 +267,8 @@ class FSMFactory:
 
     @staticmethod
     def orange_collected_transition_handler(golfbot: GolfBotMemory) -> bool:
-        if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.currentBall) < 19 and golfbot.navigator.find_turn(golfbot.heading, golfbot.pos, golfbot.currentBall)[1] < 0.35/4:
+        turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.currentBall)
+        if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.currentBall) < 19 and abs(turn_vector.x) < 0.35/4 and turn_vector.y > 0:
             return True
         return False
     
@@ -376,16 +360,27 @@ class FSMFactory:
 
     @staticmethod
     def find_approach_vector(golfbot: GolfBotMemory, point: Point) -> Vector2:
-        angle = golfbot.navigator.find_turn(golfbot.heading, golfbot.pos, point)
-        print("heading: ", str(golfbot.heading))
+        turn_vector = FSMFactory.adjust_vector((golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, point)))
+        print("turn_vector: " + str(turn_vector))
+        return turn_vector
 
-        print("flag" + str(angle[0]))
-        if angle[0] == "right":
-            turn_angle = -angle[1]
+    @staticmethod
+    def sign(value: float) -> float:
+        if value < 0:
+            return -1.0
+        elif value > 0:
+            return 1.0
         else:
-            turn_angle = angle[1]
-        print("angle" + str(turn_angle))
-        return Vector2(1,0).rotate(turn_angle)
+            return 0.0
+
+    @staticmethod
+    def adjust_vector(turn_vector: Vector2) -> Vector2:
+        if turn_vector.y < 0:
+            return Vector2(FSMFactory.sign(turn_vector.x), 0)
+        elif abs(turn_vector.x) > 0.3:
+            return Vector2(turn_vector.x, 0)
+        else:
+            return Vector2(0, turn_vector.y)
 
     @staticmethod
     def create_robot_fsm() -> StateMachine:

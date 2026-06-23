@@ -1,4 +1,4 @@
-from utils.settings import court_settings
+from .settings import court_settings
 
 class Conversion:
     def __init__(self):

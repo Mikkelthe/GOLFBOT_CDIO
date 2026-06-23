@@ -1,7 +1,7 @@
 import numpy as np
-from utils.settings import court_settings
-from utils.linalg import Vector2
-from utils import Angle, Conversion, Point
+from golfbot.utils.settings import court_settings
+from golfbot.utils.linalg import Vector2
+from golfbot.utils import Angle, Conversion, Point
 
 class Navigation:
     def __init__(self):
@@ -62,28 +62,32 @@ class Navigation:
         print("\npunkt vi kører efter: " + str(target_pos.x) + ", " + str(target_pos.y) + "\n")
         direction_radian = Vector2.signedAngle(heading_vec, target_dir_vec)
         print("Direction radian: " + str(direction_radian) + "\n")
-        if direction_radian < 0:
+        if direction_radian.radians < 0:
             turn_flag = "right"
-            turn_angle = abs(direction_radian)  # Degrees to turn
-        elif direction_radian > 0:
+            turn_angle = abs(direction_radian.radians)  # Degrees to turn
+        elif direction_radian.radians > 0:
             turn_flag = "left"
-            turn_angle = abs(direction_radian)  # Absolute value for magnitude
+            turn_angle = abs(direction_radian.radians)  # Absolute value for magnitude
         else:
             turn_flag = "none"
             turn_angle = 0
 
 
         return turn_flag, turn_angle
-    
+
+    @staticmethod
     def find_turn_2(current_heading: Angle, robot_pos: Point, target_pos: Point):
         heading_vec = Vector2(1, 0).rotate(current_heading)
-        target_dir_vec = Vector2(target_pos.x - robot_pos.x, target_pos.y - robot_pos.y)
+        print("Heading: "+ str(heading_vec))
+        print(f"Robot point: {robot_pos.x}, {robot_pos.y}")
+        print(f"Target point: {target_pos.x}, {target_pos.y}")
 
-        # Rotate both vectors by 90 degrees 
-
-        angle = Vector2.signedAngle(heading_vec, target_dir_vec)
-
-        return Vector2(0, 1).rotate(angle)
+        target_dir_vec = Vector2(target_pos.x - robot_pos.x, target_pos.y - robot_pos.y).normalized
+        print("target dir: " + str(target_dir_vec))
+        angle = Vector2.signedAngle(target_dir_vec, heading_vec)
+        print("Angle: " + str(angle))
+        vec = Vector2(0, 1).rotate(angle)
+        return Vector2(vec.x, vec.y)
 
     #finds the optimal point to approach the goal (delivery point = 24 cm from goal)
     def find_goal_approach_point(self):
