@@ -43,7 +43,7 @@ class Transform:
         self._forwardDirection = normalized
 
         # Update the angle
-        v = np.array([0, 1])
+        v = np.array([1, 0])
         signed_angle = np.atan2(v[0] * value[1] - v[1] * value[0],
                                 v[0] * value[0] + v[1] * value[1])
 

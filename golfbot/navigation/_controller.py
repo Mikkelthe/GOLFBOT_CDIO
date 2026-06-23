@@ -1,5 +1,5 @@
 from socket import *
-from utils.linalg import Vector2
+from golfbot.utils.linalg import Vector2
 import time
 
 class Controller:

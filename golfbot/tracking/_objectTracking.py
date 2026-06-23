@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 import math
 
-from utils import Conversion, Point, Angle
-from utils.settings import court_settings
+from golfbot.utils import Conversion, Point, Angle
+from golfbot.utils.settings import court_settings
 from ._courseDetector import CourseDetector
 
 class ObjectTracker:
@@ -195,7 +195,7 @@ class ObjectTracker:
             accumulated_priority_objects_list += obj
 
         # debug reporting
-        #print(f"accumulated_objects_list: {accumulated_objects_list}")
+        # print(f"accumulated_objects_list: {accumulated_objects_list}")
         # print(f"accumulated_objects_list: {accumulated_priority_objects_list}")
 
         # filtering persistent objects
@@ -213,6 +213,7 @@ class ObjectTracker:
         for (coord_x, coord_y) in accumulated_priority_objects_list:
             if (coord_x, coord_y) not in valid_priority_objects and accumulated_priority_objects_list.count((coord_x,coord_y)) > 2:
                 valid_priority_objects.append((coord_x, coord_y))
+                print(f"accumulated_objects_list: {valid_priority_objects}")
                 coord_x_px, coord_y_px = self.conversion.world_cm_to_px(coord_x, coord_y)
                 coord_point = Point(coord_x_px, coord_y_px)
                 self.validPriorityObjects.append(coord_point)
