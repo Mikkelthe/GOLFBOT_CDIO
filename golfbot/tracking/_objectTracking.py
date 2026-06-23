@@ -108,7 +108,6 @@ class ObjectTracker:
             displacement_in_px = self.conversion.cm_to_px(4.5)
             ground_x = int(round(ground_x + displacement_in_px * math.cos(angle_in_radians)))
             ground_y = int(round(ground_y + displacement_in_px * math.sin(angle_in_radians)))
-            ground_y = 1000-ground_y
             # Update botCoordinates to the ground-projected pixel coordinates (use a Point if you prefer)
             bot_coordinates = Point(ground_x, ground_y)
 
