@@ -2,7 +2,6 @@ import unittest
 from utils.settings import court_settings
 from utils import Conversion
 
-# TODO: Write tests for the conversion class
 class ConversionTestCase(unittest.TestCase):
     def test_px_to_world_cm(self):
         converter = Conversion()
