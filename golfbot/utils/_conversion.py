@@ -26,8 +26,7 @@ class Conversion:
         x_cm = x_local_px * cm_per_px_x
 
         # y = 0 at bottom of court
-        y_cm_from_top = y_local_px * cm_per_px_y
-        y_cm = court_h_cm - y_cm_from_top
+        y_cm = y_local_px * cm_per_px_y
 
         return x_cm, y_cm
 
@@ -51,11 +50,11 @@ class Conversion:
         x_local_px = x_cm / cm_per_px_x
 
         # y_cm is measured from bottom, but image y is measured from top
-        y_px_from_top_inside_court = (court_h_cm - y_cm) / cm_per_px_y
+        y_local_px = y_cm/ cm_per_px_y
 
         # Add the 50 px border back
         x_px = x_local_px + border_px
-        y_px = y_px_from_top_inside_court + border_px
+        y_px = y_local_px + border_px
 
         return int(round(x_px)), int(round(y_px))
 
