@@ -25,6 +25,5 @@ class ConversionTestCase(unittest.TestCase):
         self.assertEqual(converter_court_max_px, court_max_px)
 
 
-
 if __name__ == '__main__':
     unittest.main()
