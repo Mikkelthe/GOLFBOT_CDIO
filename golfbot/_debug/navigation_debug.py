@@ -59,22 +59,21 @@ if __name__ == '__main__':
     ground_y = int(round(CENTER_POINT_WARP.y + ground_dy))
 
     # Displace center to find true center from marker
-    displacement_in_cm = 4.5
-    displacement_in_px = nav.converter.cm_to_px(4.5)
+    displacement_in_px = nav.converter.world_cm_to_px(4.5, 4.5)
     angle_in_radians = currentHeading
-    ground_x = int(round(ground_x + displacement_in_px * math.cos(angle_in_radians)))
-    ground_y = int(round(ground_y + displacement_in_px * math.sin(angle_in_radians)))
+    ground_x = int(round(ground_x + displacement_in_px.x * math.cos(angle_in_radians)))
+    ground_y = int(round(ground_y + displacement_in_px.y * math.sin(angle_in_radians)))
 
     # Update botCoordinates to the ground-projected pixel coordinates (use a Point if you prefer)
     botCoordinates = Point(ground_x, ground_y)
-    bot_radius = nav.converter.cm_to_px(17.5, warp_w_px=nav.warp_W, warp_h_px=nav.warp_H)
+    bot_radius, _ = nav.converter.world_cm_to_px(17.5, 0)
     bot_circle = (botCoordinates, bot_radius)
     # draw bot on warped as circle(current bot radius is 16)
     warped = cv2.circle(warped, botCoordinates, bot_radius, (0, 0, 255), 3)
 
     # draw bot on warped as rectangle (width=23,5, length=34)
-    width_in_px = nav.converter.cm_to_px(23.5)
-    length_in_px = nav.converter.cm_to_px(34)
+    width_in_px, _ = nav.converter.world_cm_to_px(23.5, 0)
+    length_in_px, _ = nav.converter.world_cm_to_px(34, 0)
     rect = botCoordinates, (length_in_px, width_in_px), np.rad2deg(currentHeading)
     bot_box = cv2.boxPoints(rect)
     bot_box = bot_box.astype(int)

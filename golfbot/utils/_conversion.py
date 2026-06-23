@@ -57,17 +57,3 @@ class Conversion:
         y_px = y_local_px + border_px
 
         return int(round(x_px)), int(round(y_px))
-
-    # Requires court to be uniform to work correctly
-    @staticmethod
-    def cm_to_px(
-            radius_cm,
-            warp_w_px=court_settings.image_width,
-            warp_h_px=court_settings.image_height,
-            border_px=100,
-            court_w_cm=court_settings.court_width,
-            court_h_cm=court_settings.court_height
-    ):
-        court_w_px = warp_w_px - 2 * border_px
-        cm_per_px_x = court_w_cm / court_w_px
-        return int(round(radius_cm / cm_per_px_x))
