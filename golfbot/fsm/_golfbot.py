@@ -6,6 +6,7 @@ from tracking import CourseDetector, ObjectTracker
 from robot_logic import RoutePlanner
 from utils.linalg import Vector2
 from utils import Conversion, Angle, Point
+from utils.settings._courtSettings import court_settings
 
 class Transform:
     def __init__(self):
@@ -66,8 +67,11 @@ class GolfBotMemory:
         self.courseDetector = CourseDetector()
         self.navigator = Navigation()
         self.converter = Conversion()
-        self.approachPoint = Point(0, 0)
-        self.deliveryPoint = Point(0, 0)
+        mid_y = court_settings.image_height//2
+        goal_x = court_settings.image_width - court_settings.padding
+        # To be adjusted...
+        self.approachPoint = Point(goal_x - 100, mid_y) # 100 pixels away from the goal
+        self.deliveryPoint = Point(goal_x - 50, mid_y) # 50 pixels away from the goal
         self.router = RoutePlanner()
         self.path = []
         self.point = Point(500, 300)
