@@ -26,7 +26,7 @@ class Navigation:
         elif corner_position.x < self.warp_W/3 and corner_position.y > self.warp_H*2/3:
             b = Point(1,-1)
         # bottom right corner
-        elif corner_position.x < self.warp_W / 3 and corner_position.y > self.warp_H * 2 / 3:
+        elif corner_position.x > self.warp_W / 3 and corner_position.y > self.warp_H * 2 / 3:
             b = Point(-1, -1)
         else:
             raise ValueError("Corner position incorrect")

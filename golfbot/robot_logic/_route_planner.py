@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from collections.abc import Mapping
 from math import hypot, isinf
-import numpy as np
 from utils import Point, Conversion
+from utils.settings import court_settings
 from ._pathfinder import Pathfinder
 
 
@@ -36,6 +36,44 @@ class RoutePlanner:
             return False
 
 
+    @staticmethod
+    def __is_obstacle_like(value) -> bool:
+        try:
+            corners = tuple(value)
+        except TypeError:
+            return False
+
+        return (
+            len(corners) == 4
+            and all(RoutePlanner.__is_corner_like(corner) for corner in corners)
+        )
+
+
+    @staticmethod
+    def __field_boundaries() -> tuple[tuple[Point, Point, Point, Point], ...]:
+        width = court_settings.image_width
+        height = court_settings.image_height
+        padding = court_settings.padding
+
+        # model the padded image edges as solid wall strips
+        return (
+            (Point(0, 0), Point(width, 0), Point(width, padding), Point(0, padding)),
+            (Point(0, 0), Point(padding, 0), Point(padding, height), Point(0, height)),
+            (
+                Point(width - padding, 0),
+                Point(width, 0),
+                Point(width, height),
+                Point(width - padding, height),
+            ),
+            (
+                Point(0, height - padding),
+                Point(width, height - padding),
+                Point(width, height),
+                Point(0, height),
+            ),
+        )
+
+
     def __as_point(self, value) -> Point:
         if isinstance(value, Point):
             return value
@@ -61,39 +99,41 @@ class RoutePlanner:
     def __obstacle_to_world_cm(self, obstacle: dict):
         return tuple(self.__to_world_cm(self.__as_point(corner)) for corner in obstacle)
 
-    import numpy as np
-
 
     def __obstacles_to_world_cm(self, obstacles: dict):
-        if obstacles is None:
-            return None
+        # walls are always included even when no cross is detected
+        obstacle_polygons = list(self.__field_boundaries())
 
         if isinstance(obstacles, Mapping):
-            obstacles["top"] = [[0,0],[1500,0],[0,105],[1500,105]]
-            obstacles["left_side"] = [[0,0],[0,1000],[105,0],[105,1000]]
-            obstacles["right_side"] = [[1500,0],[1500,1000],[1395,0],[1395,1000]]
-            obstacles["bottom"] = [[0,1000],[1500,1000],[0,895],[1500,895]]
-            if "vertical_box" in obstacles or "horizontal_box" in obstacles:
-                return {
-                    key: self.__obstacle_to_world_cm(obstacles[key])
-                    for key in ("vertical_box", "horizontal_box","center","top","left_side","right_side","bottom")
-                    if key in obstacles and obstacles[key] is not None
-                }
+            # ignore metadata such as the cross center
+            obstacle_polygons.extend(
+                obstacle
+                for obstacle in obstacles.values()
+                if self.__is_obstacle_like(obstacle)
+            )
+            return tuple(self.__obstacle_to_world_cm(obstacle) for obstacle in obstacle_polygons)
 
-            return {
-                key: self.__obstacle_to_world_cm(obstacle)
-                for key, obstacle in obstacles.items()
-                if obstacle is not None
-            }
+        if obstacles is None:
+            return tuple(self.__obstacle_to_world_cm(obstacle) for obstacle in obstacle_polygons)
 
-        obstacle_items = tuple(obstacles)
+        try:
+            obstacle_items = tuple(obstacles)
+        except TypeError:
+            return tuple(self.__obstacle_to_world_cm(obstacle) for obstacle in obstacle_polygons)
+
         if (
             len(obstacle_items) == 4
             and all(self.__is_corner_like(corner) for corner in obstacle_items)
         ):
-            return (self.__obstacle_to_world_cm(obstacle_items),)
+            obstacle_polygons.append(obstacle_items)
+        else:
+            obstacle_polygons.extend(
+                obstacle
+                for obstacle in obstacle_items
+                if self.__is_obstacle_like(obstacle)
+            )
 
-        return tuple(self.__obstacle_to_world_cm(obstacle) for obstacle in obstacle_items)
+        return tuple(self.__obstacle_to_world_cm(obstacle) for obstacle in obstacle_polygons)
 
 
     def __path_cost(self, start: Point, target: Point, obstacles) -> float:
@@ -118,39 +158,20 @@ class RoutePlanner:
                 ball_point,
             ))
 
+        # try nearby balls first so path searches can stop early
         candidates.sort(key=lambda candidate: (candidate[0], candidate[1]))
         best_ball = None
         best_score = (float("inf"), float("inf"), float("inf"))
 
         for straight_distance, index, ball, ball_point in candidates:
+            # no path can beat its own straight-line distance
             if straight_distance > best_score[0]:
                 break
 
             cost = self.__path_cost(robot_point, ball_point, world_obstacles)
+            # skip balls that cannot be reached safely
             if isinf(cost):
-                vdistance = 20000000
-                vpoint = Point(0, 0)
-                for obstacle in obstacles["vertical_box"]:
-                    temp = Point(obstacle[0],obstacle[1])
-                    tempdistance = np.sqrt(np.square(ball_point.x - temp.x) + np.square(ball_point.y - temp.y))
-                    if tempdistance < vdistance:
-                        vdistance = tempdistance
-                        vpoint = temp
-
-                hdistance = 20000000
-                hpoint = Point(0,0)
-                for obstacle in obstacles["horizontal_box"]:
-                    temp = Point(obstacle[0],obstacle[1])
-                    tempdistance = np.sqrt(np.square(ball_point.x - temp.x) + np.square(ball_point.y - temp.y))
-                    if tempdistance < hdistance:
-                        hdistance = tempdistance
-                        hpoint = temp
-
-                radius = 20.0
-                crosscenter = obstacles["center"]
-                intersectionpoint = self.pathfinder.circle_intersections_np(self.pathfinder,vpoint, hpoint, Point(crosscenter[0],crosscenter[1]), radius)
-
-                cost = self.__path_cost(robot_point, intersectionpoint, world_obstacles)
+                continue
             score = (
                 cost,
                 straight_distance,
@@ -159,14 +180,13 @@ class RoutePlanner:
             if score < best_score:
                 best_score = score
                 best_ball = ball
-        if best_ball is None:
-            print("in function choose_best_next_ball")
         return best_ball
 
 
     def plan_best_path(self, start, target, obstacles=None) -> list[Point]:
         start_point = self.__as_point(start)
         target_point = self.__as_point(target)
+        # pathfinder uses centimetres while callers use image pixels
         world_path = self.pathfinder.plan_smooth_path(
             self.__to_world_cm(start_point),
             self.__to_world_cm(target_point),
@@ -175,6 +195,7 @@ class RoutePlanner:
         pixel_path = [self.__to_pixel(point) for point in world_path]
 
         if pixel_path:
+            # preserve exact endpoints after the conversion round trip
             pixel_path[0] = start_point
             pixel_path[-1] = target_point
 

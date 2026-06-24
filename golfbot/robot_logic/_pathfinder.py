@@ -39,6 +39,7 @@ class Pathfinder:
 
         midpoint = (c1 + c2) / 2
 
+        # solve the intersection height from the circle midpoint
         h_squared = radius ** 2 - (d / 2) ** 2
 
         if h_squared < 0:
@@ -53,6 +54,7 @@ class Pathfinder:
         intersection2 = midpoint - h * perpendicular
         bestpoint = Point(0, 0)
         lentomiddle = 0
+        # choose the intersection farther from the cross center
         for intersection in [intersection1, intersection2]:
             templen = np.sqrt(np.square(c.x - intersection[0]) + np.square(c.y - intersection[1]))
             if templen > lentomiddle:
@@ -103,16 +105,27 @@ class Pathfinder:
 
 
     @staticmethod
+    def __is_obstacle_like(value) -> bool:
+        try:
+            corners = tuple(value)
+        except TypeError:
+            return False
+
+        return (
+            len(corners) == 4
+            and all(Pathfinder.__is_corner_like(corner) for corner in corners)
+        )
+
+
+    @staticmethod
     def __obstacle_items(obstacles) -> tuple:
         if isinstance(obstacles, Mapping):
-            if "vertical_box" in obstacles or "horizontal_box" in obstacles:
-                return tuple(
-                    obstacles[key]
-                    for key in ("vertical_box", "horizontal_box")
-                    if key in obstacles and obstacles[key] is not None
-                )
-
-            return tuple(obstacles.values())
+            # mappings may also contain non-polygon metadata
+            return tuple(
+                value
+                for value in obstacles.values()
+                if Pathfinder.__is_obstacle_like(value)
+            )
 
         try:
             obstacle_items = tuple(obstacles)
@@ -202,6 +215,7 @@ class Pathfinder:
             ((point.x - segment_start.x) * dx + (point.y - segment_start.y) * dy)
             / segment_length_squared
         )
+        # keep the closest point on the finite segment
         clamped_projection = min(1.0, max(0.0, projection))
         closest_x = segment_start.x + clamped_projection * dx
         closest_y = segment_start.y + clamped_projection * dy
@@ -225,6 +239,7 @@ class Pathfinder:
                     / (previous.y - current.y)
                     + current.x
                 )
+                # each ray crossing switches between outside and inside
                 if point.x < intersection_x:
                     inside = not inside
 
@@ -490,6 +505,7 @@ class Pathfinder:
                 obstacles,
             )
 
+        # cells are checked from several directions during the search
         if cell not in blocked_cell_cache:
             blocked_cell_cache[cell] = self.__is_blocked_by_obstacles(
                 self.__grid_to_point(cell, bounds, grid_size_cm),
@@ -541,9 +557,11 @@ class Pathfinder:
                 continue
 
             next_point = self.__grid_to_point(next_cell, bounds, grid_size_cm)
+            # prevent diagonal steps from cutting across obstacle corners
             if self.__is_segment_blocked_by_obstacles(current_point, next_point, obstacles):
                 continue
 
+            # diagonal steps cover more distance than straight steps
             move_cost = grid_size_cm * (sqrt(2) if dx != 0 and dy != 0 else 1.0)
             neighbors.append((next_cell, move_cost, (dx, dy)))
 
@@ -589,6 +607,13 @@ class Pathfinder:
         if normalized_obstacles is None:
             normalized_obstacles = self.__normalize_obstacles(obstacles)
 
+        # check exact points before the grid can round them into safe cells
+        if (
+            self.__is_blocked_by_obstacles(start, normalized_obstacles)
+            or self.__is_blocked_by_obstacles(target, normalized_obstacles)
+        ):
+            return []
+
         bounds = self.__make_search_bounds(start, target, search_padding_cm, grid_size_cm)
         max_cell = self.__grid_limits(bounds, grid_size_cm)
         blocked_cell_cache: dict[GridCell, bool] = {}
@@ -613,30 +638,7 @@ class Pathfinder:
             max_cell,
             blocked_cell_cache,
         ):
-            vdistance = 20000000
-            vpoint = Point(0, 0)
-            for obstacle in obstacles["vertical_box"]:
-                temp = Point(obstacle[0], obstacle[1])
-                tempdistance = np.sqrt(np.square(target_cell[0] - temp.x) + np.square(target_cell[1] - temp.y))
-                if tempdistance < vdistance:
-                    vdistance = tempdistance
-                    vpoint = temp
-
-            hdistance = 20000000
-            hpoint = Point(0, 0)
-            for obstacle in obstacles["horizontal_box"]:
-                temp = Point(obstacle[0], obstacle[1])
-                tempdistance = np.sqrt(np.square(target_cell[0] - temp.x) + np.square(target_cell[1] - temp.y))
-                if tempdistance < hdistance:
-                    hdistance = tempdistance
-                    hpoint = temp
-
-            radius = 20.0
-            crosscenter = obstacles["center"][0]
-            intersectionpoint = self.circle_intersections_np(vpoint, hpoint,
-                                                                        crosscenter, radius)
-            target_cell = (intersectionpoint.x, intersectionpoint.y)
-            print("abc")
+            return []
 
         start_state: PathState = (start_cell, None)
         open_cells = []
@@ -655,6 +657,7 @@ class Pathfinder:
 
             if current == target_cell:
                 path = self.__rebuild_path(came_from, start_state, current_state, bounds, grid_size_cm)
+                # restore exact endpoints after planning with snapped cells
                 path[0] = start
                 path[-1] = target
                 return path
@@ -669,6 +672,7 @@ class Pathfinder:
             ):
                 turn_cost = 0.0
                 if previous_direction is not None and previous_direction != move_direction:
+                    # discourage extra turns when path lengths are similar
                     turn_cost = turn_penalty_cm
 
                 next_state: PathState = (neighbor, move_direction)
@@ -676,6 +680,7 @@ class Pathfinder:
 
                 if next_state not in best_cost or new_cost < best_cost[next_state]:
                     best_cost[next_state] = new_cost
+                    # rank states by traveled cost plus estimated distance left
                     priority = new_cost + self.__heuristic(neighbor, target_cell, grid_size_cm)
                     came_from[next_state] = current_state
                     heappush(open_cells, (priority, next(tie_breaker), new_cost, next_state))
@@ -712,6 +717,7 @@ class Pathfinder:
         while current_index < len(raw_path) - 1:
             next_index = current_index + 1
 
+            # take the farthest visible point to remove grid-shaped turns
             for candidate_index in range(len(raw_path) - 1, current_index, -1):
                 if self.__path_has_line_of_sight(
                     raw_path[current_index],
@@ -738,6 +744,14 @@ class Pathfinder:
     ) -> list[Point]:
         # plan and smooth a path from start to target
         normalized_obstacles = self.__normalize_obstacles(obstacles)
+        # reject unsafe endpoints before checking the direct route
+        if (
+            self.__is_blocked_by_obstacles(start, normalized_obstacles)
+            or self.__is_blocked_by_obstacles(target, normalized_obstacles)
+        ):
+            return []
+
+        # avoid grid planning when the full segment is already clear
         if not self.__is_segment_blocked_by_obstacles(start, target, normalized_obstacles):
             return [start, target]
 
