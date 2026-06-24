@@ -52,6 +52,14 @@
         "approachDeliveryPointState": {
             "name": "Approach delivery point",
             "handler": "approachDeliveryPointStateHandler"
+        },
+        "approach_narrow_goal_position_state": {
+            "name": "Approach narrow goal position",
+            "handler": "approach_narrow_goal_position_state_handler"
+        },
+        "approach_narrow_goal_heading_state": {
+            "name": "Approach narrow goal heading",
+            "handler": "approach_narrow_goal_heading_state_handler"
         }
     },
     "stateTransitions": {

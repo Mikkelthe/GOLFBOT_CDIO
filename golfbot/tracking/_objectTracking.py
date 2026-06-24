@@ -105,7 +105,7 @@ class ObjectTracker:
 
             # Displace center to find true center from marker
             displacement_x_px= int(round(34.4 * math.cos(angle_in_radians)))
-            displacement_y_px = int(round(28.8 * math.sin(angle_in_radians)))
+            displacement_y_px = int(round(28.8 * -math.sin(angle_in_radians)))
             #displacement_x_px, displacement_y_px = self.conversion.world_cm_to_px(displacement_x, displacement_y)
             newcoursettings = court_settings
             # Update botCoordinates to the ground-projected pixel coordinates (use a Point if you prefer)

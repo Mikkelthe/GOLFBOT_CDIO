@@ -134,36 +134,71 @@ class FSMFactory:
         return None
 
     @staticmethod
+    def approach_narrow_goal_position_state_handler(controller: Controller, golfbot: GolfBotMemory):
+        golfbot.updateTransform()
+        pointlist = golfbot.router.plan_best_path(golfbot.pos, golfbot.approachPoint, golfbot.cross)
+        point = pointlist[1]
+        golfbot.point = point
+        dir_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.point)
+        dir_vector = FSMFactory.adjust_vector(dir_vector)
+        controller.move_dir(dir_vector)
+
+    @staticmethod
+    def approach_narrow_goal_heading_state_handler(controller: Controller, golfbot: GolfBotMemory):
+        golfbot.updateTransform()
+        pointlist = golfbot.router.plan_best_path(golfbot.pos, golfbot.approachPoint, golfbot.cross)
+        point = pointlist[1]
+        golfbot.point = point
+        turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.point)
+        turn_vector = Vector2(FSMFactory.adjust_vector(turn_vector).x, 0.0)
+        controller.move_dir(turn_vector)
+
+    @staticmethod
     def approach_narrow_goal_state_handler(controller: Controller, golfbot: GolfBotMemory):
         golfbot.updateTransform()
         pointlist = golfbot.router.plan_best_path(golfbot.pos, golfbot.approachPoint, golfbot.cross)
         point = pointlist[1]
         golfbot.point = point
-        print("was i here")
         turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.point)
-        if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.point) > 20 and abs(turn_vector.x) > 0.035 and turn_vector.y > 0:
-            turn_vector = Vector2(FSMFactory.adjust_vector(turn_vector).x*0.2, 0)
+        print("turn_X" + str(turn_vector.x))
+        print("turn_y" + str(turn_vector.y))
+        distance = golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.point)
+        print("\n\n distance" + str(distance)+ "\n\n")
+        if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.point) > 20 and abs(turn_vector.x) > 0.30 and turn_vector.y > 0:
+            turn_vector = Vector2(FSMFactory.adjust_vector(turn_vector).x, 0.0)
             controller.move_dir(turn_vector)
         else:
-            movement_vector = FSMFactory.find_approach_vector(golfbot, point)
-            controller.move_dir(movement_vector)
+            if distance < 5:
+
+                movement_vector = Vector2(0.4,0.0)
+                controller.move_dir(movement_vector)
+            elif distance < 10:
+                movement_vector = FSMFactory.find_approach_vector(golfbot, golfbot.point)
+                movement_vector = Vector2(-turn_vector.x, turn_vector.y)
+                controller.move_dir(turn_vector*0.5)
+            elif distance < 15:
+                movement_vector = FSMFactory.find_approach_vector(golfbot, golfbot.point)
+                controller.move_dir(movement_vector*0.5)
+            else:
+                movement_vector = FSMFactory.find_approach_vector(golfbot, golfbot.point)
+                controller.move_dir(movement_vector)
+
         return None
 
     @staticmethod
     def approach_delivery_point_state_handler(controller: Controller, golfbot: GolfBotMemory):
         golfbot.updateTransform()
         turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.deliveryPoint)
-        if abs(turn_vector.x) > 0.010:
-            turn_vector = Vector2(FSMFactory.adjust_vector(turn_vector).x*0.2, 0)
-            controller.move_dir(turn_vector)
+        actual_goal = Point(1400,500)
+        goal_dir = Vector2(golfbot.deliveryPoint.x, golfbot.deliveryPoint.y) - golfbot.pos
+        dot_prod = Vector2.dot(golfbot.forwardDirection, goal_dir.normalized)
+
+        if dot_prod > -0.95:
+            turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.deliveryPoint )
+            real_turn_vector = Vector2(-turn_vector.x, 0.0)
+            controller.move_dir(real_turn_vector)
         else:
-            if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.deliveryPoint) > 10:
-                if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.deliveryPoint) > 3:
-                    controller.move_dir(Vector2(x=0,y=-0.25), not_backwards=False)
-                else:
-                    controller.move_dir(Vector2(x=0,y=-0.50), not_backwards=False)
-            else:
-                controller.move_dir(Vector2(x=0,y=-1), not_backwards=False)
+            controller.move_dir(Vector2(0.0, -0.5))
         return None
 
     @staticmethod
@@ -204,7 +239,7 @@ class FSMFactory:
     def reached_goal_transition_handler(golfbot: GolfBotMemory) -> bool:
         golfbot.updateTransform()
         distance = golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.deliveryPoint)
-        if distance < 1:
+        if distance < 2:
             return True
         else:
             return False
@@ -212,9 +247,12 @@ class FSMFactory:
     @staticmethod
     def reached_approach_point_transition_handler(golfbot: GolfBotMemory) -> bool:
         golfbot.updateTransform()
+        goal_dir = Vector2(golfbot.deliveryPoint.x, golfbot.deliveryPoint.y) - golfbot.pos
+        dot_prod = Vector2.dot(golfbot.forwardDirection, goal_dir.normalized)
         distance = golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.deliveryPoint)
         turn_vector = golfbot.navigator.find_turn_2(golfbot.heading,golfbot.pos,golfbot.approachPoint)
-        if distance > 1 and abs(turn_vector.x) < 0.35 and turn_vector.y > 0:
+        #print("\n\n\nDOT PROD\n\n\n" + str(dot_prod))
+        if (distance < 10 and dot_prod < -0.95):
             return True
         else:
             return False
