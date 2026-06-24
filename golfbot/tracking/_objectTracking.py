@@ -104,11 +104,12 @@ class ObjectTracker:
             ground_y = int(round(CENTER_POINT_WARP.y + ground_dy))
 
             # Displace center to find true center from marker
-            displacement_in_px = self.conversion.world_cm_to_px(4.5, 4.5)
-            ground_x = int(round(ground_x + displacement_in_px.x * math.cos(angle_in_radians)))
-            ground_y = int(round(ground_y + displacement_in_px.y * math.sin(angle_in_radians)))
+            displacement_x = int(round(ground_x + 4.5 * math.cos(angle_in_radians)))
+            displacement_y = int(round(ground_y + 4.5 * math.sin(angle_in_radians)))
+            displacement_x_px, displacement_y_px = self.conversion.world_cm_to_px(displacement_x, displacement_y)
+
             # Update botCoordinates to the ground-projected pixel coordinates (use a Point if you prefer)
-            bot_coordinates = Point(ground_x, ground_y)
+            bot_coordinates = Point(displacement_x_px, displacement_y_px)
 
             center = bot_coordinates
         else:
