@@ -3,7 +3,7 @@ import io
 import time
 import math
 from pathlib import Path
-from navigation import Controller
+from golfbot.navigation import Controller
 from ._golfbot import GolfBotMemory
 from ._state import State, Transition, StateMachine
 from utils.settings import court_settings
@@ -318,7 +318,7 @@ class FSMFactory:
     
     @staticmethod
     def is_in_quadrant(x: int, y: int, golfbot: GolfBotMemory) -> bool:
-        cross = golfbot.cross["center"]
+        cross = golfbot.cross["center"][0]
 
         if x <= cross[0] and y < cross[1] and golfbot.quadrant == 1:
             return True
