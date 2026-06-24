@@ -1,6 +1,7 @@
 import cv2
 import math
 import numpy as np
+import time
 from navigation import Navigation
 from tracking import CourseDetector, ObjectTracker
 from robot_logic import RoutePlanner
@@ -110,7 +111,7 @@ class GolfBotMemory:
             raise Exception('Video device not available')
         self.videoDevice.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
         self.videoDevice.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-
+        time.sleep(10)
         _, img = self.videoDevice.read()
         self.arena = self.courseDetector.find_arena(img)
 

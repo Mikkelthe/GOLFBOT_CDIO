@@ -137,9 +137,11 @@ class FSMFactory:
     def approach_narrow_goal_state_handler(controller: Controller, golfbot: GolfBotMemory):
         golfbot.updateTransform()
         pointlist = golfbot.router.plan_best_path(golfbot.pos, golfbot.approachPoint, golfbot.cross)
-        point = pointlist[0]
-        turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.currentBall)
-        if golfbot.navigator.find_distance_between_points(golfbot.pos, point) > 20 and abs(turn_vector.x) > 0.035 and turn_vector.y > 0:
+        point = pointlist[1]
+        golfbot.point = point
+        print("was i here")
+        turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.point)
+        if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.point) > 20 and abs(turn_vector.x) > 0.035 and turn_vector.y > 0:
             turn_vector = Vector2(FSMFactory.adjust_vector(turn_vector).x*0.2, 0)
             controller.move_dir(turn_vector)
         else:
@@ -150,7 +152,7 @@ class FSMFactory:
     @staticmethod
     def approach_delivery_point_state_handler(controller: Controller, golfbot: GolfBotMemory):
         golfbot.updateTransform()
-        turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.currentBall)
+        turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.deliveryPoint)
         if abs(turn_vector.x) > 0.010:
             turn_vector = Vector2(FSMFactory.adjust_vector(turn_vector).x*0.2, 0)
             controller.move_dir(turn_vector)
@@ -211,7 +213,7 @@ class FSMFactory:
     def reached_approach_point_transition_handler(golfbot: GolfBotMemory) -> bool:
         golfbot.updateTransform()
         distance = golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.deliveryPoint)
-        turn_vector = golfbot.navigator.find_turn_2(golfbot.heading,golfbot.pos,golfbot.currentBall)
+        turn_vector = golfbot.navigator.find_turn_2(golfbot.heading,golfbot.pos,golfbot.approachPoint)
         if distance > 1 and abs(turn_vector.x) < 0.35 and turn_vector.y > 0:
             return True
         else:
