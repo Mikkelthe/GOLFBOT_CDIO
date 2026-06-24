@@ -54,20 +54,34 @@ class RoutePlanner:
         width = court_settings.image_width
         height = court_settings.image_height
         padding = court_settings.padding
+        wall_thickness = court_settings.wall_thickness
 
-        # model the padded image edges as solid wall strips
         return (
-            (Point(0, 0), Point(width, 0), Point(width, padding), Point(0, padding)),
-            (Point(0, 0), Point(padding, 0), Point(padding, height), Point(0, height)),
+            # top
             (
-                Point(width - padding, 0),
+                Point(0, 0),
+                Point(width, 0),
+                Point(width, padding + wall_thickness),
+                Point(0, padding + wall_thickness)
+            ),
+            # left
+            (
+                Point(0, 0),
+                Point(padding + wall_thickness, 0),
+                Point(padding + wall_thickness, height),
+                Point(0, height)
+            ),
+            # right
+            (
+                Point(width - padding + wall_thickness, 0),
                 Point(width, 0),
                 Point(width, height),
-                Point(width - padding, height),
+                Point(width - padding + wall_thickness, height),
             ),
+            # bottom
             (
-                Point(0, height - padding),
-                Point(width, height - padding),
+                Point(0, height - padding + wall_thickness),
+                Point(width, height - padding + wall_thickness),
                 Point(width, height),
                 Point(0, height),
             ),

@@ -8,6 +8,6 @@ class CourtSettings:
     image_height: int = 1000
     camera_height: int = 190
     padding: int = 100
-
+    wall_thickness: int = 5
 
 court_settings = CourtSettings()
