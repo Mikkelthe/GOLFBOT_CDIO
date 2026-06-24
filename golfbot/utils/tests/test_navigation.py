@@ -117,7 +117,7 @@ class NavigationTestCase(unittest.TestCase):
 
         # The result should be relative to corner or an approach point
         self.assertIsInstance(result, Point)
-        # Just verify it returns valid coordinates
+        # Verify it returns valid coordinates
         self.assertTrue(isinstance(result.x, int))
         self.assertTrue(isinstance(result.y, int))
 
