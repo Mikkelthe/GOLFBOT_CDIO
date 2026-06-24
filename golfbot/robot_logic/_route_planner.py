@@ -4,6 +4,7 @@ from math import hypot, isinf
 from utils import Point, Conversion
 from utils.settings import court_settings
 from ._pathfinder import Pathfinder
+from ._navigation_config import ROBOT_RADIUS_CM
 
 
 @dataclass(frozen=True)
@@ -15,8 +16,39 @@ class RoutePlanner:
     def __init__(self):
         self.pathfinder = Pathfinder()
         self.converter = Conversion()
-    @staticmethod
 
+    @staticmethod
+    def __robot_wall_clearance_px() -> tuple[float, float]:
+        court_width_px = court_settings.image_width - 2 * court_settings.padding
+        court_height_px = court_settings.image_height - 2 * court_settings.padding
+        extra_clearance_px = court_settings.wall_clearance_extra_px
+
+        return (
+            (ROBOT_RADIUS_CM * court_width_px / court_settings.court_width) + extra_clearance_px,
+            (ROBOT_RADIUS_CM * court_height_px / court_settings.court_height) + extra_clearance_px,
+        )
+
+    @staticmethod
+    def __safe_target_bounds_px() -> tuple[float, float, float, float]:
+        clearance_x_px, clearance_y_px = RoutePlanner.__robot_wall_clearance_px()
+        wall_inset_px = court_settings.padding + court_settings.wall_thickness
+
+        return (
+            wall_inset_px + clearance_x_px,
+            court_settings.image_width - wall_inset_px - clearance_x_px,
+            wall_inset_px + clearance_y_px,
+            court_settings.image_height - wall_inset_px - clearance_y_px,
+        )
+
+    @staticmethod
+    def __project_target_to_safe_bounds(point: Point) -> Point:
+        min_x, max_x, min_y, max_y = RoutePlanner.__safe_target_bounds_px()
+        return Point(
+            min(max(point.x, min_x), max_x),
+            min(max(point.y, min_y), max_y),
+        )
+
+    @staticmethod
     def __distance(point_a: Point, point_b: Point) -> float:
         return hypot(point_b.x - point_a.x, point_b.y - point_a.y)
 
@@ -164,7 +196,9 @@ class RoutePlanner:
         candidates = []
 
         for index, ball in enumerate(balls):
-            ball_point = self.__to_world_cm(self.__as_point(ball))
+            ball_pixel = self.__as_point(ball)
+            drive_target_pixel = self.__project_target_to_safe_bounds(ball_pixel)
+            ball_point = self.__to_world_cm(drive_target_pixel)
             candidates.append((
                 self.__distance(robot_point, ball_point),
                 index,
@@ -200,10 +234,12 @@ class RoutePlanner:
     def plan_best_path(self, start, target, obstacles=None) -> list[Point]:
         start_point = self.__as_point(start)
         target_point = self.__as_point(target)
+        drive_target_point = self.__project_target_to_safe_bounds(target_point)
+
         # pathfinder uses centimetres while callers use image pixels
         world_path = self.pathfinder.plan_smooth_path(
             self.__to_world_cm(start_point),
-            self.__to_world_cm(target_point),
+            self.__to_world_cm(drive_target_point),
             obstacles=self.__obstacles_to_world_cm(obstacles),
         )
         pixel_path = [self.__to_pixel(point) for point in world_path]
@@ -211,7 +247,6 @@ class RoutePlanner:
         if pixel_path:
             # preserve exact endpoints after the conversion round trip
             pixel_path[0] = start_point
-            pixel_path[-1] = target_point
+            pixel_path[-1] = drive_target_point
 
         return pixel_path
-
