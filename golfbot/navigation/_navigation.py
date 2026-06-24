@@ -37,11 +37,10 @@ class Navigation:
     
         vector_factor = (relative_vector.x * b.x + relative_vector.y * b.y) / (b.x **2 + b.y **2)
     
-        optimal_approach_vector = Point(b.x * vector_factor,
-                                        b.y * vector_factor)
+        optimal_approach_vector = Vector2(b.x * vector_factor,
+                                        b.y * vector_factor).normalized * 50
     
-        optimal_position = Point(optimal_approach_vector.x - corner_position.x, optimal_approach_vector.y - corner_position.y)
-    
+        optimal_position = Point(optimal_approach_vector.x + corner_position.x, optimal_approach_vector.y + corner_position.y)
         return optimal_position
     
     #find distance between two points (for example: bot and ball)
