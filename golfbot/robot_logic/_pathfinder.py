@@ -638,7 +638,30 @@ class Pathfinder:
             max_cell,
             blocked_cell_cache,
         ):
-            return []
+            vdistance = 20000000
+            vpoint = Point(0, 0)
+            for obstacle in obstacles["vertical_box"]:
+                temp = Point(obstacle[0], obstacle[1])
+                tempdistance = np.sqrt(np.square(target_cell[0] - temp.x) + np.square(target_cell[1] - temp.y))
+                if tempdistance < vdistance:
+                    vdistance = tempdistance
+                    vpoint = temp
+
+            hdistance = 20000000
+            hpoint = Point(0, 0)
+            for obstacle in obstacles["horizontal_box"]:
+                temp = Point(obstacle[0], obstacle[1])
+                tempdistance = np.sqrt(np.square(target_cell[0] - temp.x) + np.square(target_cell[1] - temp.y))
+                if tempdistance < hdistance:
+                    hdistance = tempdistance
+                    hpoint = temp
+
+            radius = 20.0
+            crosscenter = obstacles["center"][0]
+            intersectionpoint = self.circle_intersections_np(vpoint, hpoint,
+                                                             crosscenter, radius)
+            target_cell = (intersectionpoint.x, intersectionpoint.y)
+            print("abc")
 
         start_state: PathState = (start_cell, None)
         open_cells = []

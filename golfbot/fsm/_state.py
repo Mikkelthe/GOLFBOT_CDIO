@@ -60,6 +60,9 @@ class StateMachine:
                                               color=(0, 255, 0), length=1)
                 warped = draw_vector_on_image(warped, robot_pos, target_dir*50,
                                               color=(255, 255, 0), length=1)
+                #obstacles = self.memory.cross
+                #for obstacle in obstacles.values():
+                #    warped = cv2.polylines(warped, obstacle, False, (0,0,255))
                 cv2.imshow("Debug", warped)
 
                 if cv2.waitKey(1) & 0xFF == ord('q'):

@@ -41,13 +41,14 @@ class Controller:
     def move_dir(self, direction: Vector2, not_backwards: bool = True):
         #print("i was here")
         print(direction)
-        if direction[1] > 0.2 and not_backwards:
-            #print("i was also here")
+        #if direction[1] > 0.2 and not_backwards:
+        #print("i was also here")
+        direction = Vector2(float(-direction[0]), float(direction[1]))
+        command = f"[{direction.x:.3},{direction.y:.3}]".encode("UTF-8")
+        self.robotSocket.sendto(command, self.robotHost)
+        time.sleep(0.08)
+        """else:
             direction = Vector2(-direction[0], direction[1])
-            command = f"[{direction.x:.3},{direction.y:.3}]".encode("UTF-8")
-            self.robotSocket.sendto(command, self.robotHost)
-            time.sleep(0.08)
-        else:
             if direction[0] < 0:
                 direction = Vector2(0.5, 0.0)
             else:
@@ -55,7 +56,7 @@ class Controller:
             #print(direction)
             command = f"[{direction.x:.3},{direction.y:.3}]".encode("UTF-8")
             self.robotSocket.sendto(command, self.robotHost)
-            time.sleep(0.08)
+            time.sleep(0.08)"""
 
 
     def turn_off_fan(self):

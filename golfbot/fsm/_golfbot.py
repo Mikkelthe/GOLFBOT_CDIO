@@ -74,7 +74,7 @@ class GolfBotMemory:
         self.deliveryPoint = Point(goal_x - 50, mid_y) # 50 pixels away from the goal
         self.router = RoutePlanner()
         self.path = []
-        self.point = Point(500, 300)
+        self.point = Point(0, 0)
         self.motorStarted = False
 
         self.videoDevice = None
