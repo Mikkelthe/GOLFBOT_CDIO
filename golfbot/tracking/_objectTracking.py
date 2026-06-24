@@ -49,7 +49,7 @@ class ObjectTracker:
 
             width = warped_bgr.shape[1]
             height = warped_bgr.shape[0]
-            if x < 90 or x > width-90 or y < 90 or y > height-90:
+            if x < 102 or x > width-102 or y < 102 or y > height-102:
                 continue
             real_x, real_y = self.conversion.px_to_world_cm(x, y, warp_w_px=width, warp_h_px=height)
             detections.append((float(real_x), float(real_y), int(x), int(y), int(r), float(area), float(circularity)))

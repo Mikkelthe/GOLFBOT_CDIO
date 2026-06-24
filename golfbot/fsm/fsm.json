@@ -37,6 +37,10 @@
             "name": "Find nearest ball",
             "handler": "findNearestStateHandler"
         },
+        "illegalState": {
+            "name": "Illegal state",
+            "handler": "illegalStateHandler"
+        },
         "approachCoordinateInCornerState": {
             "name": "Approach corner coordinate",
             "handler": "approachCoordinateInCornerStateHandler"
@@ -77,7 +81,7 @@
             {
                 "name": "Orange balls = 0 and White balls = 0",
                 "handler": "noneDetectedTransitionHandler",
-                "nextState": "approachNarrowGoalState"
+                "nextState": "approach_narrow_goal_position_state"
             }
         ],
         "collectOrangeState": [
@@ -153,6 +157,11 @@
                 "name": "Nearest ball not in corner",
                 "handler": "nearestBallNotInCornerTransitionHandler",
                 "nextState": "approachWhiteBallCoordinateState"
+            },
+            {
+                "name": "Illegal state handler",
+                "handler": "illegalTransitionHandler",
+                "nextState": "illegalState"
             }
         ],
         "approachCoordinateInCornerState": [
@@ -191,6 +200,28 @@
                 "name": "Goal reached",
                 "handler": "reachedGoalTransitionHandler",
                 "nextState": "submitBallsState"
+            }
+        ],
+        "approach_narrow_goal_position_state": [
+            {
+                "name": "Goal position reached",
+                "handler": "reached_approach_point_position_transition_handler",
+                "nextState": "approach_narrow_goal_heading_state"
+            }
+        ],
+        "approach_narrow_goal_heading_state": [
+            {
+                "name": "Goal heading reached",
+                "handler": "reached_approach_point_heading_transition_handler",
+                "nextState": "approachDeliveryPointState"
+            }
+        ],
+        "illegalState": [
+            {
+                "name": "At center of quadrant",
+                "handler": "reachedCenterOfQuadrantHandler",
+                "nextState": "checkQuadrantState"
+
             }
         ]
     }

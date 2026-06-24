@@ -154,6 +154,8 @@ class Vector2(Sequence[float]):
         """
         The normalized vector
         """
+        if self.magnitude == 0:
+            return Vector2(0, 0)
         normalized = self._arr/self.magnitude
         return Vector2(normalized[0], normalized[1])
     

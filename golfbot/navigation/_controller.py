@@ -69,9 +69,11 @@ class Controller:
         self.robotSocket.sendto(b"h", self.robotHost)
 
     def open_door(self):
-        self.esp32Socket.send(b"o")
-        time.sleep(0.02)
+        for i in range(10):
+            self.robotSocket.sendto(b"o", self.robotHost)
+            time.sleep(0.02)
 
     def close_door(self):
-        self.esp32Socket.send(b"p")
-        time.sleep(0.02)
+        for i in range(10):
+            self.robotSocket.sendto(b"p", self.robotHost)
+            time.sleep(0.02)

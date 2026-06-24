@@ -193,6 +193,7 @@ class RoutePlanner:
 
     def choose_best_next_ball(self, robot_position, balls, obstacles=None):
         if not balls:
+            print(" ")
             return None
 
         robot_point = self.__to_world_cm(self.__as_point(robot_position))

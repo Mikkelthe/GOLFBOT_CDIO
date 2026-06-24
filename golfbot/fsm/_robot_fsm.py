@@ -43,8 +43,11 @@ class FSMFactory:
         golfbot.updateTransform()
         print(golfbot.currentBall.x)
         pointlist = golfbot.router.plan_best_path(golfbot.pos, golfbot.currentBall, golfbot.cross)
-        if len(pointlist) >= 1:
-            golfbot.point = golfbot.router.plan_best_path(golfbot.pos, golfbot.currentBall, golfbot.cross)[1]
+        print("\n" + str(golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.currentBall)) + "\n")
+        if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.currentBall) < court_settings.closeToBall:
+            golfbot.point = golfbot.currentBall
+        elif len(pointlist) > 1:
+            golfbot.point = pointlist[1]
         if 40 > golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.currentBall) > 20:
             if not golfbot.motorStarted:
                 print("i should turn on")
@@ -71,12 +74,33 @@ class FSMFactory:
         golfbot.updateTransform()
         ballsinmind = []
         for ball in golfbot.whiteBalls:
-            if ball is FSMFactory.is_in_quadrant(ball.x,ball.y, golfbot):
+            if FSMFactory.is_in_quadrant(ball.x,ball.y, golfbot):
                 ballsinmind.append(ball)
         golfbot.currentBall = golfbot.router.choose_best_next_ball(golfbot.pos, ballsinmind, golfbot.cross)
         if golfbot.currentBall is None:
-            print("hygge")
+            golfbot.router.choose_best_next_ball(golfbot.pos, golfbot.whiteBalls, golfbot.cross)
+            if golfbot.currentBall is None:
+                print("hygge")
         return None
+
+    @staticmethod
+    def illegal_state_handler(controller: Controller, golfbot: GolfBotMemory):
+        q = FSMFactory.current_quadrant(golfbot)
+        print("\n my q is:" + str(q) + "\n")
+        if q == 1:
+            golfbot.point = Point(425,300)
+        elif q == 2:
+            golfbot.point = Point(1075,300)
+        elif q == 3:
+            golfbot.point = Point(1075,700)
+        elif q == 4:
+            golfbot.point = Point(425,700)
+
+        movement_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.point)
+        #movement_vector = FSMFactory.find_approach_vector(golfbot, golfbot.point)
+        controller.move_dir(movement_vector * 0.25)
+        return None
+
 
     #Should be used for both the orange and white ball in state corner. Takes current ball and goes to it using corner strategy
     @staticmethod
@@ -85,17 +109,19 @@ class FSMFactory:
         corner_approach_point = (golfbot.navigator.find_optimal_corner_approach(golfbot.currentBall, golfbot.pos))
         #ToDo Adjust to correct tolerance for approach line
         pointlist = golfbot.router.plan_best_path(golfbot.pos, corner_approach_point, golfbot.cross)
-        if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.currentBall) > court_settings.closeToBall:
+        if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.currentBall) < court_settings.closeToBall:
             golfbot.point = golfbot.currentBall
+            if not golfbot.motorStarted:
+                print("i should turn on")
+                controller.turn_on_fan()
+                golfbot.motorStarted = True
         elif len(pointlist) > 1:
             golfbot.point = pointlist[1]
-        else:
-            golfbot.point = Point(2000,2000)
         if golfbot.navigator.find_distance_between_points(golfbot.pos, corner_approach_point) < 2:
             golfbot.goingToCornerLine = False
 
         if golfbot.goingToCornerLine:
-            movement_vector = FSMFactory.find_approach_vector(golfbot, corner_approach_point)
+            movement_vector = FSMFactory.find_approach_vector(golfbot, golfbot.point)
             controller.move_dir(movement_vector)
         elif golfbot.currentBall:
             movement_vector = FSMFactory.find_approach_vector(golfbot, golfbot.currentBall)
@@ -112,7 +138,7 @@ class FSMFactory:
     def approach_white_coordinate_state_handler(controller: Controller, golfbot: GolfBotMemory):
         golfbot.updateTransform()
         pointlist = golfbot.router.plan_best_path(golfbot.pos, golfbot.currentBall, golfbot.cross)
-        if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.currentBall) > court_settings.closeToBall:
+        if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.currentBall) < court_settings.closeToBall:
             golfbot.point = golfbot.currentBall
         elif len(pointlist) > 1:
             golfbot.point = pointlist[1]
@@ -146,7 +172,11 @@ class FSMFactory:
     def approach_narrow_goal_position_state_handler(controller: Controller, golfbot: GolfBotMemory):
         golfbot.updateTransform()
         pointlist = golfbot.router.plan_best_path(golfbot.pos, golfbot.approachPoint, golfbot.cross)
-        point = pointlist[1]
+        if len (pointlist) > 1:
+            point = pointlist[1]
+        else:
+            point = pointlist[0]
+
         golfbot.point = point
         dir_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.point)
         dir_vector = FSMFactory.adjust_vector(dir_vector)
@@ -155,11 +185,12 @@ class FSMFactory:
     @staticmethod
     def approach_narrow_goal_heading_state_handler(controller: Controller, golfbot: GolfBotMemory):
         golfbot.updateTransform()
-        pointlist = golfbot.router.plan_best_path(golfbot.pos, golfbot.approachPoint, golfbot.cross)
-        point = pointlist[1]
-        golfbot.point = point
-        turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.point)
-        turn_vector = Vector2(FSMFactory.adjust_vector(turn_vector).x, 0.0)
+        #pointlist = golfbot.router.plan_best_path(golfbot.pos, golfbot.deliveryPoint, golfbot.cross)
+        golfbot.point = golfbot.deliveryPoint
+        target_turn = Vector2(-(golfbot.deliveryPoint.x+200), golfbot.deliveryPoint.y)
+        turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, target_turn)
+        turn_vector = FSMFactory.adjust_vector(turn_vector)
+        turn_vector = Vector2(min(0.6, abs(target_turn.x)) * FSMFactory.sign(turn_vector.x), 0.0)
         controller.move_dir(turn_vector)
 
     @staticmethod
@@ -197,18 +228,22 @@ class FSMFactory:
     @staticmethod
     def approach_delivery_point_state_handler(controller: Controller, golfbot: GolfBotMemory):
         golfbot.updateTransform()
+        golfbot.point = golfbot.deliveryPoint
         turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.deliveryPoint)
         actual_goal = Point(1400,500)
         goal_dir = Vector2(golfbot.deliveryPoint.x, golfbot.deliveryPoint.y) - golfbot.pos
         dot_prod = Vector2.dot(golfbot.forwardDirection, goal_dir.normalized)
 
-        if dot_prod > -0.95:
-            turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.deliveryPoint )
-            real_turn_vector = Vector2(-turn_vector.x, 0.0)
-            controller.move_dir(real_turn_vector)
-        else:
-            controller.move_dir(Vector2(0.0, -0.5))
-        return None
+        controller.move_dir(Vector2(min(0.2, abs(turn_vector.x*3))*FSMFactory.sign(turn_vector.x), turn_vector.y/2))
+        #controller.move_dir(turn_vector)
+
+        #if dot_prod > -0.95:
+        #    turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.deliveryPoint )
+        #    real_turn_vector = Vector2(-turn_vector.x, 0.0)
+        #    controller.move_dir(real_turn_vector)
+        #else:
+        #    controller.move_dir(Vector2(0.0, -0.5))
+        #return None
 
     @staticmethod
     def avoid_obstacle_state_handler(controller: Controller, golfbot: GolfBotMemory):
@@ -221,7 +256,7 @@ class FSMFactory:
         controller.open_door()
         time.sleep(2)
         controller.close_door()
-        controller.open_door()
+        time.sleep(1)
         return None
 
     # Transitions
@@ -248,7 +283,12 @@ class FSMFactory:
     def reached_goal_transition_handler(golfbot: GolfBotMemory) -> bool:
         golfbot.updateTransform()
         distance = golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.deliveryPoint)
-        if distance < 2:
+        print("\n\nDistance: " + str(distance) + "\n\n")
+
+        dot_prod = Vector2.dot(golfbot.forwardDirection, Vector2(-1, 0))
+        print("\n\nDot product: " + str(dot_prod) + "\n\n")
+
+        if 3 < distance < 4 and dot_prod > 0.99:
             return True
         else:
             return False
@@ -266,6 +306,18 @@ class FSMFactory:
         else:
             return False
 
+    @staticmethod
+    def reached_approach_point_position_transition_handler(golfbot: GolfBotMemory) -> bool:
+        golfbot.updateTransform()
+        distance = golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.approachPoint)
+        return distance < 10
+
+    @staticmethod
+    def reached_approach_point_heading_transition_handler(golfbot: GolfBotMemory) -> bool:
+        golfbot.updateTransform()
+        goal_dir = Vector2(golfbot.deliveryPoint.x+200, golfbot.deliveryPoint.y) - golfbot.pos
+        dot_prod = Vector2.dot(golfbot.forwardDirection, goal_dir.normalized)
+        return dot_prod < -0.95
 
     @staticmethod
     def failed_to_collect_orange_transition_handler(golfbot: GolfBotMemory) -> bool:
@@ -280,13 +332,25 @@ class FSMFactory:
     
     @staticmethod
     def nearest_ball_in_corner_transition_handler(golfbot: GolfBotMemory) -> bool:
-        if golfbot.currentBall and FSMFactory.is_in_corner(golfbot, golfbot.currentBall[0], golfbot.currentBall[1]):
+        if golfbot.currentBall and FSMFactory.is_in_corner(golfbot, golfbot.currentBall[0], golfbot.currentBall[1]) and golfbot.currentBall is not None:
             return True
         return False
 
     @staticmethod
     def nearest_ball_not_in_corner_transition_handler(golfbot: GolfBotMemory) -> bool:
-        if not FSMFactory.nearest_ball_in_corner_transition_handler(golfbot):
+        if not FSMFactory.nearest_ball_in_corner_transition_handler(golfbot) and golfbot.currentBall is not None:
+            return True
+        return False
+
+    @staticmethod
+    def illegal_transition_handler(golfbot: GolfBotMemory) -> bool:
+        if golfbot.currentBall is None:
+            return True
+        return False
+
+    @staticmethod
+    def reached_center_of_quadrant_handler(golfbot: GolfBotMemory) -> bool:
+        if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.point) < 10:
             return True
         return False
     
@@ -294,7 +358,10 @@ class FSMFactory:
     def ball_collected_transition_handler(golfbot: GolfBotMemory) -> bool:
         turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.currentBall)
         #extra if things   - - - - - - and abs(turn_vector.x) < 0.37 and turn_vector.y > 0
-        if 21 > golfbot.navigator.find_distance_between_points(golfbot.currentBall, golfbot.pos):
+        distance = golfbot.navigator.find_distance_between_points(golfbot.currentBall, golfbot.pos)
+        print("\n I am distance" + str(distance) + "\n")
+
+        if 19 > distance:
             for ball in golfbot.whiteBalls:
                if ball is golfbot.currentBall:
                    golfbot.whiteBalls.remove(ball)
@@ -331,7 +398,7 @@ class FSMFactory:
     @staticmethod
     def orange_collected_transition_handler(golfbot: GolfBotMemory) -> bool:
         turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.currentBall)
-        if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.currentBall) < 19 and abs(turn_vector.x) < 0.35 and turn_vector.y > 0:
+        if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.currentBall) < 20:
             return True
         return False
     
@@ -410,8 +477,7 @@ class FSMFactory:
     @staticmethod
     def current_quadrant(golfbot: GolfBotMemory) -> int:
         golfbot.updateTransform()
-        x, y = golfbot.converter.px_to_world_cm(golfbot.pos.x, golfbot.pos.y)
-        point = [x,y]
+        point = golfbot.pos
         cross_center = golfbot.cross["center"][0]
 
         if point[0] <= cross_center[0] and point[1] < cross_center[1]:

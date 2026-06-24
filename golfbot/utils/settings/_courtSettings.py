@@ -10,6 +10,6 @@ class CourtSettings:
     padding: int = 100
     wall_thickness: int = 5
     wall_clearance_extra_px: int = 45
-    closeToBall: int = 24
+    closeToBall: int = 28
 
 court_settings = CourtSettings()
