@@ -9,6 +9,7 @@ from ._state import State, Transition, StateMachine
 from utils.settings import court_settings
 from utils.linalg import Vector2
 from utils import Point, Angle
+from robot_logic._navigation_config import ROBOT_RADIUS_CM
 
 class FSMFactory:
     # States
@@ -78,6 +79,11 @@ class FSMFactory:
         golfbot.updateTransform()
         corner_approach_point = (golfbot.navigator.find_optimal_corner_approach(golfbot.currentBall, golfbot.pos))
         #ToDo Adjust to correct tolerance for approach line
+        pointlist = golfbot.router.plan_best_path(golfbot.pos, corner_approach_point, golfbot.cross)
+        if len(pointlist) > 1:
+            golfbot.point = pointlist[1]
+        else:
+            golfbot.point = Point(2000,2000)
         if golfbot.navigator.find_distance_between_points(golfbot.pos, corner_approach_point) < 2:
             golfbot.goingToCornerLine = False
 
@@ -240,6 +246,9 @@ class FSMFactory:
         turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.currentBall)
         #extra if things   - - - - - - and abs(turn_vector.x) < 0.37 and turn_vector.y > 0
         if 19 > golfbot.navigator.find_distance_between_points(golfbot.currentBall, golfbot.pos):
+            for ball in golfbot.whiteBalls:
+               if ball is golfbot.currentBall:
+                   golfbot.whiteBalls.remove(ball)
 
             return True
 
@@ -273,7 +282,7 @@ class FSMFactory:
     @staticmethod
     def orange_collected_transition_handler(golfbot: GolfBotMemory) -> bool:
         turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.currentBall)
-        if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.currentBall) < 19 and abs(turn_vector.x) < 0.35/4 and turn_vector.y > 0:
+        if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.currentBall) < 19 and abs(turn_vector.x) < 0.35 and turn_vector.y > 0:
             return True
         return False
     
@@ -333,24 +342,28 @@ class FSMFactory:
     
     @staticmethod
     def is_in_corner(golfbot: GolfBotMemory, x: int, y: int) -> bool:
-        x,y = golfbot.converter.px_to_world_cm(x,y)
         return FSMFactory.x_coordinate_in_corner(x) and FSMFactory.y_coordinate_in_corner(y)
     
     @staticmethod
     def x_coordinate_in_corner(x: int) -> bool:
-
-        return x<15 or x>court_settings.court_width-15
+        #the +5 is to avoid having edge cases where Kim's algortihm does not work
+        actual_court_width = court_settings.image_width - 2 * court_settings.padding
+        botradius_px = ROBOT_RADIUS_CM * actual_court_width / court_settings.court_width
+        return x > court_settings.image_width - court_settings.padding - (court_settings.wall_clearance_extra_px + botradius_px + 5) or x < court_settings.padding + (court_settings.wall_clearance_extra_px + botradius_px + 5)
+        #return False
 
     @staticmethod
     def y_coordinate_in_corner(y: int) -> bool:
-        return y<15 or y>court_settings.court_height-15
+        actual_court_height = court_settings.image_height - 2 * court_settings.padding
+        botradius_px = ROBOT_RADIUS_CM * actual_court_height / court_settings.court_height
+        return y > court_settings.image_height - court_settings.padding - (court_settings.wall_clearance_extra_px + botradius_px + 5) or y < court_settings.padding + (court_settings.wall_clearance_extra_px + botradius_px + 5)
 
     @staticmethod
     def current_quadrant(golfbot: GolfBotMemory) -> int:
         golfbot.updateTransform()
         x, y = golfbot.converter.px_to_world_cm(golfbot.pos.x, golfbot.pos.y)
         point = [x,y]
-        cross_center = golfbot.cross["center"]
+        cross_center = golfbot.cross["center"][0]
 
         if point[0] <= cross_center[0] and point[1] < cross_center[1]:
             return 1
