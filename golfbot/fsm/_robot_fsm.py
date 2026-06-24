@@ -4,6 +4,7 @@ import time
 import math
 from pathlib import Path
 from golfbot.navigation import Controller
+from navigation import Controller
 from ._golfbot import GolfBotMemory
 from ._state import State, Transition, StateMachine
 from utils.settings import court_settings
@@ -16,8 +17,8 @@ class FSMFactory:
     @staticmethod
     #done
     def detect_balls_state_handler(controller: Controller, golfbot: GolfBotMemory):
-        golfbot.updateTransform()
         controller.move_dir(Vector2(0, 0))
+        golfbot.updateTransform()
         golfbot.whiteBalls, golfbot.orangeBalls, golfbot.cross = golfbot.objectTracker.find_objects_in_image(golfbot.videoDevice)
         return None
 
@@ -68,7 +69,11 @@ class FSMFactory:
     @staticmethod
     def find_nearest_state_handler(controller: Controller, golfbot: GolfBotMemory):
         golfbot.updateTransform()
-        golfbot.currentBall = golfbot.router.choose_best_next_ball(golfbot.pos, golfbot.whiteBalls, golfbot.cross)
+        ballsinmind = []
+        for ball in golfbot.whiteBalls:
+            if ball is FSMFactory.is_in_quadrant(ball.x,ball.y, golfbot):
+                ballsinmind.append(ball)
+        golfbot.currentBall = golfbot.router.choose_best_next_ball(golfbot.pos, ballsinmind, golfbot.cross)
         if golfbot.currentBall is None:
             print("hygge")
         return None
@@ -80,7 +85,9 @@ class FSMFactory:
         corner_approach_point = (golfbot.navigator.find_optimal_corner_approach(golfbot.currentBall, golfbot.pos))
         #ToDo Adjust to correct tolerance for approach line
         pointlist = golfbot.router.plan_best_path(golfbot.pos, corner_approach_point, golfbot.cross)
-        if len(pointlist) > 1:
+        if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.currentBall) > court_settings.closeToBall:
+            golfbot.point = golfbot.currentBall
+        elif len(pointlist) > 1:
             golfbot.point = pointlist[1]
         else:
             golfbot.point = Point(2000,2000)
@@ -105,8 +112,10 @@ class FSMFactory:
     def approach_white_coordinate_state_handler(controller: Controller, golfbot: GolfBotMemory):
         golfbot.updateTransform()
         pointlist = golfbot.router.plan_best_path(golfbot.pos, golfbot.currentBall, golfbot.cross)
-        if len(pointlist) >= 1:
-            golfbot.point = golfbot.router.plan_best_path(golfbot.pos, golfbot.currentBall, golfbot.cross)[1]
+        if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.currentBall) > court_settings.closeToBall:
+            golfbot.point = golfbot.currentBall
+        elif len(pointlist) > 1:
+            golfbot.point = pointlist[1]
         if 40 > golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.currentBall) > 20:
             if not golfbot.motorStarted:
                 print("i should turn on")
@@ -285,7 +294,7 @@ class FSMFactory:
     def ball_collected_transition_handler(golfbot: GolfBotMemory) -> bool:
         turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.currentBall)
         #extra if things   - - - - - - and abs(turn_vector.x) < 0.37 and turn_vector.y > 0
-        if 19 > golfbot.navigator.find_distance_between_points(golfbot.currentBall, golfbot.pos):
+        if 21 > golfbot.navigator.find_distance_between_points(golfbot.currentBall, golfbot.pos):
             for ball in golfbot.whiteBalls:
                if ball is golfbot.currentBall:
                    golfbot.whiteBalls.remove(ball)
