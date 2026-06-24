@@ -49,6 +49,10 @@ class RoutePlanner:
         )
 
     @staticmethod
+    def __points_equal(point_a: Point, point_b: Point) -> bool:
+        return point_a.x == point_b.x and point_a.y == point_b.y
+
+    @staticmethod
     def __distance(point_a: Point, point_b: Point) -> float:
         return hypot(point_b.x - point_a.x, point_b.y - point_a.y)
 
@@ -234,7 +238,13 @@ class RoutePlanner:
     def plan_best_path(self, start, target, obstacles=None) -> list[Point]:
         start_point = self.__as_point(start)
         target_point = self.__as_point(target)
+        safe_start_point = self.__project_target_to_safe_bounds(start_point)
         drive_target_point = self.__project_target_to_safe_bounds(target_point)
+
+        # when the robot starts outside the safe wall clearance box, first drive to the nearest safe point
+        # fsm can then call this method again with the same target from the updated robot position.
+        if not self.__points_equal(start_point, safe_start_point):
+            return [start_point, safe_start_point]
 
         # pathfinder uses centimetres while callers use image pixels
         world_path = self.pathfinder.plan_smooth_path(
@@ -245,8 +255,9 @@ class RoutePlanner:
         pixel_path = [self.__to_pixel(point) for point in world_path]
 
         if pixel_path:
-            # preserve exact endpoints after the conversion round trip
+            # preserve exact endpoints after the conversion
             pixel_path[0] = start_point
             pixel_path[-1] = drive_target_point
+            return pixel_path
 
-        return pixel_path
+        return [start_point]
