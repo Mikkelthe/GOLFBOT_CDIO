@@ -12,7 +12,7 @@ if __name__ == '__main__':
     WARP_W, WARP_H = 1500, 1000
     COURT_W_CM, COURT_H_CM = 170.0, 125.0
 
-    videodevice = cv2.VideoCapture(1,cv2.CAP_DSHOW)
+    videodevice = cv2.VideoCapture(0,cv2.CAP_DSHOW)
     videodevice.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
     videodevice.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
