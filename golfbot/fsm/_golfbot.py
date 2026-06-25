@@ -68,11 +68,11 @@ class GolfBotMemory:
         self.courseDetector = CourseDetector()
         self.navigator = Navigation()
         self.converter = Conversion()
-        mid_y = court_settings.image_height//2 - 50
-        goal_x = court_settings.image_width - court_settings.padding
+        mid_y = court_settings.image_height//2 - 10
+        goal_x = court_settings.padding
         # To be adjusted...
-        self.approachPoint = Point(goal_x - 300, mid_y) # 300 pixels away from the goal
-        self.deliveryPoint = Point(goal_x - 250, mid_y) # 250 pixels away from the goal
+        self.approachPoint = Point(goal_x + 350, mid_y) # 300 pixels away from the goal
+        self.deliveryPoint = Point(goal_x + 275, mid_y) # 250 pixels away from the goal
         self.router = RoutePlanner()
         self.path = []
         self.point = Point(0, 0)

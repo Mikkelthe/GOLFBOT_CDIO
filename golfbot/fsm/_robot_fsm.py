@@ -187,7 +187,7 @@ class FSMFactory:
         golfbot.updateTransform()
         #pointlist = golfbot.router.plan_best_path(golfbot.pos, golfbot.deliveryPoint, golfbot.cross)
         golfbot.point = golfbot.deliveryPoint
-        target_turn = Vector2(-(golfbot.deliveryPoint.x+200), golfbot.deliveryPoint.y)
+        target_turn = Vector2((golfbot.deliveryPoint.x+1000), golfbot.deliveryPoint.y)
         turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, target_turn)
         turn_vector = FSMFactory.adjust_vector(turn_vector)
         turn_vector = Vector2(min(0.6, abs(target_turn.x)) * FSMFactory.sign(turn_vector.x), 0.0)
@@ -230,11 +230,11 @@ class FSMFactory:
         golfbot.updateTransform()
         golfbot.point = golfbot.deliveryPoint
         turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.deliveryPoint)
-        actual_goal = Point(1400,500)
-        goal_dir = Vector2(golfbot.deliveryPoint.x, golfbot.deliveryPoint.y) - golfbot.pos
-        dot_prod = Vector2.dot(golfbot.forwardDirection, goal_dir.normalized)
+        #actual_goal = Point(1400,500)
+        #goal_dir = Vector2(golfbot.deliveryPoint.x, golfbot.deliveryPoint.y) - golfbot.pos
+        #dot_prod = Vector2.dot(golfbot.forwardDirection, goal_dir.normalized)
 
-        controller.move_dir(Vector2(min(0.2, abs(turn_vector.x*3))*FSMFactory.sign(turn_vector.x), turn_vector.y/2))
+        controller.move_dir(Vector2(min(0.15, abs(turn_vector.x*3))*FSMFactory.sign(turn_vector.x), turn_vector.y/2))
         #controller.move_dir(turn_vector)
 
         #if dot_prod > -0.95:
@@ -285,10 +285,10 @@ class FSMFactory:
         distance = golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.deliveryPoint)
         print("\n\nDistance: " + str(distance) + "\n\n")
 
-        dot_prod = Vector2.dot(golfbot.forwardDirection, Vector2(-1, 0))
+        dot_prod = Vector2.dot(golfbot.forwardDirection, Vector2(1, 0))
         print("\n\nDot product: " + str(dot_prod) + "\n\n")
 
-        if 3 < distance < 4 and dot_prod > 0.99:
+        if 5 < distance and dot_prod > 0.98:
             return True
         else:
             return False
