@@ -764,6 +764,7 @@ class Pathfinder:
         grid_size_cm: float = GRID_SIZE_CM,
         turn_penalty_cm: float = TURN_PENALTY_CM,
         search_padding_cm: float = SEARCH_PADDING_CM,
+        coming_from_best_ball: bool = False,
     ) -> list[Point]:
         # plan and smooth a path from start to target
         normalized_obstacles = self.__normalize_obstacles(obstacles)
@@ -772,7 +773,38 @@ class Pathfinder:
             self.__is_blocked_by_obstacles(start, normalized_obstacles)
             or self.__is_blocked_by_obstacles(target, normalized_obstacles)
         ):
-            return []
+            if (
+                    (self.__is_blocked_by_obstacles(start, normalized_obstacles)
+                     or self.__is_blocked_by_obstacles(target, normalized_obstacles)) and not coming_from_best_ball
+            ):
+                vdistance = 20000000
+                vpoint = Point(0, 0)
+                print(obstacles)
+                for obstacle in obstacles["vertical_box"]:
+                    temp = Point(obstacle[0], obstacle[1])
+                    tempdistance = np.sqrt(np.square(target[0] - temp.x) + np.square(target[1] - temp.y))
+                    if tempdistance < vdistance:
+                        vdistance = tempdistance
+                        vpoint = temp
+
+                hdistance = 20000000
+                hpoint = Point(0, 0)
+                for obstacle in obstacles["horizontal_box"]:
+                    temp = Point(obstacle[0], obstacle[1])
+                    tempdistance = np.sqrt(np.square(target[0] - temp.x) + np.square(target[1] - temp.y))
+                    if tempdistance < hdistance:
+                        hdistance = tempdistance
+                        hpoint = temp
+
+                radius = 20.0
+                crosscenter = obstacles["center"][0]
+                intersectionpoint = self.circle_intersections_np(vpoint, hpoint,
+                                                                 crosscenter, radius)
+                target = Point(intersectionpoint[0], intersectionpoint[1])
+                print("abc")
+            elif ((self.__is_blocked_by_obstacles(start, normalized_obstacles)
+                   or self.__is_blocked_by_obstacles(target, normalized_obstacles)) and coming_from_best_ball):
+                return []
 
         # avoid grid planning when the full segment is already clear
         if not self.__is_segment_blocked_by_obstacles(start, target, normalized_obstacles):

@@ -224,7 +224,7 @@ class RoutePlanner:
             cost = self.__path_cost(robot_point, ball_point, world_obstacles)
             # skip balls that cannot be reached safely
             if isinf(cost):
-                continue
+                cost = 100000000000000
             score = (
                 cost,
                 straight_distance,
