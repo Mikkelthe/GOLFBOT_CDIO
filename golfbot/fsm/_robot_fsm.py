@@ -54,7 +54,7 @@ class FSMFactory:
                 controller.turn_on_fan()
                 golfbot.motorStarted = True
             movement_vector = FSMFactory.find_approach_vector(golfbot, golfbot.point)
-            controller.move_dir(movement_vector*0.25)
+            controller.move_dir(movement_vector*0.5)
         else:
             if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.currentBall) > 20:
                 movement_vector = FSMFactory.find_approach_vector(golfbot, golfbot.point)
@@ -148,7 +148,7 @@ class FSMFactory:
                 controller.turn_on_fan()
                 golfbot.motorStarted = True
             movement_vector = FSMFactory.find_approach_vector(golfbot, golfbot.point)
-            controller.move_dir(movement_vector * 0.25)
+            controller.move_dir(movement_vector * 0.5)
         else:
             if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.currentBall) > 20:
                 movement_vector = FSMFactory.find_approach_vector(golfbot, golfbot.point)
