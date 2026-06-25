@@ -135,7 +135,14 @@ class ObjectTracker:
             white_balls, w_mask, w_center = self.__detect_balls_by_hsv(blurred, lower=(0, 0, 200), upper=(180, 110, 255))
             shadowy_white_balls, sw, sw_center = self.__detect_balls_by_hsv(blurred, lower=(0, 0, 115), upper=(180, 100, 250))
 
-            self.crossPosition = self.courseDetector.find_red_cross_boxes(warped)
+            try:
+                self.crossPosition = self.courseDetector.find_red_cross_boxes(warped)
+            except Exception as e:
+                self.crossPosition = {
+                    "vertical_box": [[0,0],[0,0],[0,0],[0,0]],
+                    "horizontal_box": [[0,0],[0,0],[0,0],[0,0]],
+                    "center": [[0,0]],
+                }
 
             if self.crossPosition is None:
                 print("i failed to find cross_center")
