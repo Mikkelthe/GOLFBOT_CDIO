@@ -71,6 +71,7 @@ class FSMFactory:
     #done
     @staticmethod
     def find_nearest_state_handler(controller: Controller, golfbot: GolfBotMemory):
+        controller.move_dir(Vector2(0,0))
         golfbot.updateTransform()
         ballsinmind = []
         for ball in golfbot.whiteBalls:
@@ -98,7 +99,7 @@ class FSMFactory:
 
         movement_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.point)
         #movement_vector = FSMFactory.find_approach_vector(golfbot, golfbot.point)
-        controller.move_dir(movement_vector * 0.25)
+        controller.move_dir(movement_vector * 0.5)
         return None
 
 
@@ -257,6 +258,7 @@ class FSMFactory:
         time.sleep(2)
         controller.close_door()
         time.sleep(1)
+        golfbot.submitLoopInt += 1
         return None
 
     # Transitions
@@ -270,7 +272,7 @@ class FSMFactory:
     @staticmethod
     def white_in_quadrant_transition_handler(golfbot: GolfBotMemory) -> bool:
         _, img = golfbot.videoDevice.read()
-        golfbot.whiteBalls, orange_balls, cross_pos = golfbot.objectTracker.find_objects_in_image(golfbot.videoDevice)
+        #golfbot.whiteBalls, orange_balls, cross_pos = golfbot.objectTracker.find_objects_in_image(golfbot.videoDevice)
         for ball in golfbot.whiteBalls:
             return FSMFactory.is_in_quadrant(ball[0], ball[1], golfbot)
         return False
@@ -285,10 +287,11 @@ class FSMFactory:
         distance = golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.deliveryPoint)
         print("\n\nDistance: " + str(distance) + "\n\n")
 
-        dot_prod = Vector2.dot(golfbot.forwardDirection, Vector2(-1, 0))
+        dot_prod = Vector2.dot(golfbot.forwardDirection, Vector2(-0.99693, -0.07833))
         print("\n\nDot product: " + str(dot_prod) + "\n\n")
 
-        if 3 < distance < 4 and dot_prod > 0.99:
+        if 3 < distance < 4 and dot_prod > 0.98:
+            golfbot.submitLoopInt = 0
             return True
         else:
             return False
@@ -361,11 +364,12 @@ class FSMFactory:
         distance = golfbot.navigator.find_distance_between_points(golfbot.currentBall, golfbot.pos)
         print("\n I am distance" + str(distance) + "\n")
 
-        if 19 > distance:
+        if 21 > distance:
             for ball in golfbot.whiteBalls:
                if ball is golfbot.currentBall:
                    golfbot.whiteBalls.remove(ball)
-
+            print("ball point: "+str(ball.x)+","+ str(ball.y))
+            print(golfbot.whiteBalls)
             return True
 
         return False
@@ -398,7 +402,7 @@ class FSMFactory:
     @staticmethod
     def orange_collected_transition_handler(golfbot: GolfBotMemory) -> bool:
         turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.currentBall)
-        if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.currentBall) < 20:
+        if golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.currentBall) < 21:
             return True
         return False
     
@@ -440,7 +444,14 @@ class FSMFactory:
             return False
         else:
             return True
-    
+
+    @staticmethod
+    def balls_submitted_transition_handler(golfbot:GolfBotMemory) -> bool:
+        if golfbot.submitLoopInt > 3:
+            time.sleep(5)
+            return True
+        return False
+
     @staticmethod
     def is_in_quadrant(x: int, y: int, golfbot: GolfBotMemory) -> bool:
         cross = golfbot.cross["center"][0]

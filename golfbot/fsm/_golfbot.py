@@ -68,6 +68,7 @@ class GolfBotMemory:
         self.courseDetector = CourseDetector()
         self.navigator = Navigation()
         self.converter = Conversion()
+        self.submitLoopInt = 0
         mid_y = court_settings.image_height//2 - 50
         goal_x = court_settings.image_width - court_settings.padding
         # To be adjusted...
