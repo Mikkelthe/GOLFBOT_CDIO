@@ -777,6 +777,7 @@ class Pathfinder:
                     (self.__is_blocked_by_obstacles(start, normalized_obstacles)
                      or self.__is_blocked_by_obstacles(target, normalized_obstacles)) and not coming_from_best_ball
             ):
+                return []
                 vdistance = 20000000
                 vpoint = Point(0, 0)
                 print(obstacles)

@@ -19,6 +19,14 @@ class FSMFactory:
     def detect_balls_state_handler(controller: Controller, golfbot: GolfBotMemory):
         controller.move_dir(Vector2(0, 0))
         golfbot.updateTransform()
+        distance = golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.deliveryPoint)
+        print("\n\nRobot position: " + str(golfbot.pos.x) + ", " + str(golfbot.pos.y)  + "\n\n")
+        print("\n\nDelivery point: " + str(golfbot.deliveryPoint.x) + ", " + str(golfbot.deliveryPoint.y)  + "\n\n")
+
+        print("\n\nDistance: " + str(distance) + "\n\n")
+
+        dot_prod = Vector2.dot(golfbot.forwardDirection, Vector2(1, 0))
+        print("\n\nDot product: " + str(dot_prod) + "\n\n")
         golfbot.whiteBalls, golfbot.orangeBalls, golfbot.cross = golfbot.objectTracker.find_objects_in_image(golfbot.videoDevice)
         return None
 
@@ -74,10 +82,13 @@ class FSMFactory:
         controller.move_dir(Vector2(0,0))
         golfbot.updateTransform()
         ballsinmind = []
+        print("\n")
         for ball in golfbot.whiteBalls:
+            print ("whiteball: " + str(ball.x) + "," + str(ball.y))
             if FSMFactory.is_in_quadrant(ball.x,ball.y, golfbot):
                 ballsinmind.append(ball)
         golfbot.currentBall = golfbot.router.choose_best_next_ball(golfbot.pos, ballsinmind, golfbot.cross)
+        print("\n")
         if golfbot.currentBall is None:
             golfbot.router.choose_best_next_ball(golfbot.pos, golfbot.whiteBalls, golfbot.cross)
             if golfbot.currentBall is None:
@@ -188,10 +199,10 @@ class FSMFactory:
         golfbot.updateTransform()
         #pointlist = golfbot.router.plan_best_path(golfbot.pos, golfbot.deliveryPoint, golfbot.cross)
         golfbot.point = golfbot.deliveryPoint
-        target_turn = Vector2((golfbot.deliveryPoint.x+1000), golfbot.deliveryPoint.y)
+        target_turn = Point(golfbot.deliveryPoint.x+1000, golfbot.deliveryPoint.y)
         turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, target_turn)
-        turn_vector = FSMFactory.adjust_vector(turn_vector)
-        turn_vector = Vector2(min(0.6, abs(target_turn.x)) * FSMFactory.sign(turn_vector.x), 0.0)
+        #turn_vector = FSMFactory.adjust_vector(turn_vector)
+        turn_vector = Vector2(max(0.4, abs(turn_vector.x)) * FSMFactory.sign(turn_vector.x), 0.0)
         controller.move_dir(turn_vector)
 
     @staticmethod
@@ -235,8 +246,8 @@ class FSMFactory:
         #goal_dir = Vector2(golfbot.deliveryPoint.x, golfbot.deliveryPoint.y) - golfbot.pos
         #dot_prod = Vector2.dot(golfbot.forwardDirection, goal_dir.normalized)
 
-        controller.move_dir(Vector2(min(0.15, abs(turn_vector.x*3))*FSMFactory.sign(turn_vector.x), turn_vector.y/2))
-        #controller.move_dir(turn_vector)
+        #controller.move_dir(Vector2(max(0.2, abs(turn_vector.x))*FSMFactory.sign(turn_vector.x), turn_vector.y))
+        controller.move_dir(turn_vector)
 
         #if dot_prod > -0.95:
         #    turn_vector = golfbot.navigator.find_turn_2(golfbot.heading, golfbot.pos, golfbot.deliveryPoint )
@@ -290,7 +301,7 @@ class FSMFactory:
         dot_prod = Vector2.dot(golfbot.forwardDirection, Vector2(1, 0))
         print("\n\nDot product: " + str(dot_prod) + "\n\n")
 
-        if 5 < distance and dot_prod > 0.98:
+        if distance < 8 and dot_prod > 0.98:
             return True
         else:
             return False
@@ -312,12 +323,12 @@ class FSMFactory:
     def reached_approach_point_position_transition_handler(golfbot: GolfBotMemory) -> bool:
         golfbot.updateTransform()
         distance = golfbot.navigator.find_distance_between_points(golfbot.pos, golfbot.approachPoint)
-        return distance < 10
+        return distance < 5
 
     @staticmethod
     def reached_approach_point_heading_transition_handler(golfbot: GolfBotMemory) -> bool:
         golfbot.updateTransform()
-        goal_dir = Vector2(golfbot.deliveryPoint.x+200, golfbot.deliveryPoint.y) - golfbot.pos
+        goal_dir = Vector2(golfbot.deliveryPoint.x-200, golfbot.deliveryPoint.y) - golfbot.pos
         dot_prod = Vector2.dot(golfbot.forwardDirection, goal_dir.normalized)
         return dot_prod < -0.95
 
@@ -346,7 +357,13 @@ class FSMFactory:
 
     @staticmethod
     def illegal_transition_handler(golfbot: GolfBotMemory) -> bool:
-        if golfbot.currentBall is None:
+        if golfbot.currentBall is None and (time.time() - golfbot.time) < 300:
+            return True
+        return False
+
+    @staticmethod
+    def time_illegal_transition_handler(golfbot: GolfBotMemory) -> bool:
+        if (time.time() - golfbot.time) > 300:
             return True
         return False
 
@@ -448,6 +465,7 @@ class FSMFactory:
     def balls_submitted_transition_handler(golfbot:GolfBotMemory) -> bool:
         if golfbot.submitLoopInt > 3:
             time.sleep(5)
+            golfbot.time = time.time()
             return True
         return False
 

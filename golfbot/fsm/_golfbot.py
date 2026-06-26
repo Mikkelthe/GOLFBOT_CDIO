@@ -62,6 +62,7 @@ class GolfBotMemory:
         self.currentBall: Point | None = None
         self.whiteBalls = []
         self.orangeBalls = []
+        self.time = 0
         self.storedBallCount = 0
         self._transform = Transform()
         self.objectTracker = ObjectTracker()
@@ -113,6 +114,7 @@ class GolfBotMemory:
         self.videoDevice.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
         self.videoDevice.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
         time.sleep(10)
+        self.time = time.time()
         _, img = self.videoDevice.read()
         self.arena = self.courseDetector.find_arena(img)
 

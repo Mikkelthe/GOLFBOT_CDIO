@@ -228,6 +228,11 @@
                 "handler": "reachedCenterOfQuadrantHandler",
                 "nextState": "checkQuadrantState"
 
+            },
+            {
+                "name": "time to submit",
+                "handler": "timeIllegalTransitionHandler",
+                "nextState": "approach_narrow_goal_position_state"
             }
         ]
     }

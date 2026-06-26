@@ -186,8 +186,8 @@ class RoutePlanner:
         return tuple(self.__obstacle_to_world_cm(obstacle) for obstacle in obstacle_polygons)
 
 
-    def __path_cost(self, start: Point, target: Point, obstacles) -> float:
-        path = self.pathfinder.plan_smooth_path(start, target, obstacles=obstacles)
+    def __path_cost(self, start: Point, target: Point, obstacles, coming_from_best_ball = False) -> float:
+        path = self.pathfinder.plan_smooth_path(start, target, obstacles=obstacles, coming_from_best_ball = coming_from_best_ball)
         return self.pathfinder.path_length(path) if path else float("inf")
 
 
@@ -221,7 +221,7 @@ class RoutePlanner:
             if straight_distance > best_score[0]:
                 break
 
-            cost = self.__path_cost(robot_point, ball_point, world_obstacles)
+            cost = self.__path_cost(robot_point, ball_point, world_obstacles, coming_from_best_ball = True)
             # skip balls that cannot be reached safely
             if isinf(cost):
                 cost = 100000000000000

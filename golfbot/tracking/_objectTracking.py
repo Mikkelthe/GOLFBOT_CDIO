@@ -146,6 +146,22 @@ class ObjectTracker:
 
             if self.crossPosition is None:
                 print("i failed to find cross_center")
+                center = (
+                    int(750),
+                    int(500)
+                )
+                boxes = []
+                boxes.append([[995, 619],
+                [959, 619],
+                [959, 493],
+                [995, 493]])
+                boxes.append([[1041, 573],
+                [914, 573],
+                [914, 538],
+                [1041, 538]])
+                self.crossPosition = {"vertical_box": boxes[0],
+                "horizontal_box": boxes[1],
+                "center": [center]}
             else:
                 print(len(self.crossPosition))
                 print(self.crossPosition)
